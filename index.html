@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>3D 角色骨骼操作平台 | 3D Character Rigging & Animation Studio</title>
-  <link rel="stylesheet" href="style.css?v=3.5">
+  <link rel="stylesheet" href="style.css?v=4.0">
   <!-- Import map for Three.js ES Modules -->
   <script type="importmap">
     {
@@ -25,8 +25,10 @@
       <div class="viewport-header">
         <h1>3D Character Studio</h1>
         <select id="model-select" autocomplete="off" title="切換 3D 模型">
-          <option value="miku_psp_with_bones_fixed.glb" selected>初音未來 (Hatsune Miku - 輕量極速 300KB)</option>
-          <option value="gloria_rigged.glb">Gloria (Tripo 3D - 高精細 110MB)</option>
+          <option value="miku_psp_with_bones_fixed.glb" selected>初音未來 (Hatsune Miku - 300KB)</option>
+          <option value="girl_rigged.glb">T-Pose 少女 (Girl Rigged - 2.4MB)</option>
+          <option value="woman_rigged.glb">寫實女性 (Woman Base - 2.9MB)</option>
+          <option value="gloria_rigged.glb">Gloria (Tripo 3D - 110MB)</option>
         </select>
         <span class="badge" id="model-status-badge">載入中...</span>
       </div>
@@ -319,6 +321,6 @@ Root
     </div>
   </div>
 
-  <script type="module" src="app.js?v=3.5"></script>
+  <script type="module" src="app.js?v=4.0"></script>
 </body>
 </html>

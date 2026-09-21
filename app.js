@@ -23,6 +23,8 @@ let animSpeed = 1.0;
 let animClock = new THREE.Clock();
 let animTime = 0;
 let initialBoneRotations = new Map(); // name -> initial Euler
+let mixer = null;
+let clipsMap = new Map(); // clip name lowercase -> AnimationAction
 
 // Performance & FPS State
 let lastFpsTime = performance.now();
@@ -173,26 +175,47 @@ function loadModel(modelUrl) {
     scene.remove(model);
     model = null;
   }
+  if (mixer) {
+    mixer.stopAllAction();
+    mixer = null;
+  }
+  clipsMap.clear();
 
   bonesMap.clear();
   skinnedMeshes = [];
   originalMaterials.clear();
   initialBoneRotations.clear();
 
+  let titleName = '3D 模型';
+  if (modelUrl.includes('miku')) titleName = '初音未來 (Miku)';
+  else if (modelUrl.includes('girl')) titleName = 'T-Pose 少女 (Girl)';
+  else if (modelUrl.includes('woman')) titleName = '寫實女性 (Woman)';
+  else if (modelUrl.includes('gloria')) titleName = 'Gloria';
+
   loadingOverlay.style.display = 'flex';
   loadingOverlay.style.opacity = '1';
-  loadingTitle.textContent = `正在載入 ${modelUrl === 'gloria_rigged.glb' ? 'Gloria' : '初音未來 (Miku)'}...`;
+  loadingTitle.textContent = `正在載入 ${titleName}...`;
   loadingDetail.textContent = '讀取模型與骨架權重中...';
   loadingProgress.style.width = '0%';
 
   const loader = new GLTFLoader();
-  const fetchUrl = modelUrl + (modelUrl.includes('?') ? '&' : '?') + 'v=3.5';
+  const fetchUrl = modelUrl + (modelUrl.includes('?') ? '&' : '?') + 'v=4.0';
 
   loader.load(
     fetchUrl,
     (gltf) => {
       model = gltf.scene;
       scene.add(model);
+
+      // Setup AnimationMixer if embedded clips exist
+      if (gltf.animations && gltf.animations.length > 0) {
+        mixer = new THREE.AnimationMixer(model);
+        gltf.animations.forEach((clip) => {
+          const action = mixer.clipAction(clip);
+          clipsMap.set(clip.name.toLowerCase(), action);
+        });
+        console.log(`Loaded ${gltf.animations.length} embedded clips:`, Array.from(clipsMap.keys()));
+      }
 
       // Collect meshes and bones
       model.traverse((child) => {
@@ -270,6 +293,9 @@ function loadModel(modelUrl) {
       // Auto select Head bone
       selectBoneByName('Head');
       if (!selectedBone) selectBoneByName('Bone_Head');
+
+      // Play initial animation
+      playAnimation(currentAnim);
     },
     (xhr) => {
       if (xhr.lengthComputable) {
@@ -294,17 +320,31 @@ function loadModel(modelUrl) {
 }
 
 function updateSpecsInfo(modelUrl, box) {
-  const isMiku = modelUrl.includes('miku');
-  if (infoName) infoName.textContent = isMiku ? '初音未來 (Hatsune Miku)' : 'Gloria';
-  if (infoFilesize) infoFilesize.textContent = isMiku ? '~300 KB' : '~110 MB';
+  let displayName = '3D Model';
+  let displaySize = '~2.5 MB';
+  if (modelUrl.includes('miku')) {
+    displayName = '初音未來 (Hatsune Miku)';
+    displaySize = '~300 KB';
+  } else if (modelUrl.includes('girl')) {
+    displayName = 'T-Pose 少女 (Girl Rigged)';
+    displaySize = '~2.4 MB';
+  } else if (modelUrl.includes('woman')) {
+    displayName = '寫實女性 (Woman Base)';
+    displaySize = '~2.9 MB';
+  } else if (modelUrl.includes('gloria')) {
+    displayName = 'Gloria (Tripo 3D)';
+    displaySize = '~110 MB';
+  }
+  if (infoName) infoName.textContent = displayName;
+  if (infoFilesize) infoFilesize.textContent = displaySize;
   if (infoMeshes) infoMeshes.textContent = `${skinnedMeshes.length} Skinned Meshes`;
   if (infoBones) infoBones.textContent = `${bonesMap.size} Joints`;
 
   if (hierarchyPreview) {
-    if (isMiku) {
+    if (modelUrl.includes('miku')) {
       hierarchyPreview.textContent = `Root\n└── Center (骨盆)\n    ├── Spine (脊椎)\n    │   └── Chest (胸腔)\n    │       ├── Neck -> Head (頭部)\n    │       │   ├── LeftTwintail (左雙馬尾 1..3)\n    │       │   └── RightTwintail (右雙馬尾 1..3)\n    │       ├── LeftShoulder -> Arm -> Hand (左手)\n    │       └── RightShoulder -> Arm -> Hand (右手)\n    └── Hips (下半身)\n        ├── Skirt (前後左右裙襬)\n        ├── LeftUpperLeg -> Knee -> Foot (左腿)\n        └── RightUpperLeg -> Knee -> Foot (右腿)`;
     } else {
-      hierarchyPreview.textContent = `Root\n└── Bone_Hips (骨盆)\n    ├── Bone_Spine -> Bone_Chest (胸腔)\n    │   ├── Bone_Neck -> Bone_Head (頭部)\n    │   ├── Bone_LeftUpperArm -> Hand (左臂)\n    │   └── Bone_RightUpperArm -> Hand (右臂)\n    ├── Bone_LeftUpperLeg -> Foot (左腿)\n    └── Bone_RightUpperLeg -> Foot (右腿)`;
+      hierarchyPreview.textContent = `Root\n└── Hips (骨盆)\n    ├── Spine -> Chest (胸腔)\n    │   ├── Neck -> Head (頭部)\n    │   ├── LeftUpperArm -> LowerArm -> Hand (左手)\n    │   └── RightUpperArm -> LowerArm -> Hand (右手)\n    ├── LeftUpperLeg -> LowerLeg -> Foot (左腿)\n    └── RightUpperLeg -> LowerLeg -> Foot (右腿)`;
     }
   }
 }
@@ -667,15 +707,42 @@ function updateProceduralAnimations(delta) {
   }
 }
 
+function playAnimation(anim) {
+  currentAnim = anim;
+  if (mixer) {
+    clipsMap.forEach(action => action.stop());
+    const lower = anim.toLowerCase();
+    if (clipsMap.has(lower)) {
+      const act = clipsMap.get(lower);
+      act.reset().play();
+    } else {
+      resetAllBones(false);
+    }
+  } else {
+    resetAllBones(false);
+  }
+  togglePlayPause(true);
+}
+
 function togglePlayPause(play) {
   if (play === undefined) isPlaying = !isPlaying;
   else isPlaying = play;
 
   const btnIcon = document.getElementById('play-pause-icon');
+  const lower = currentAnim.toLowerCase();
   if (isPlaying) {
     btnIcon.textContent = '⏸️';
+    if (mixer && clipsMap.has(lower)) {
+      clipsMap.get(lower).paused = false;
+      if (!clipsMap.get(lower).isRunning()) {
+        clipsMap.get(lower).play();
+      }
+    }
   } else {
     btnIcon.textContent = '▶️';
+    if (mixer && clipsMap.has(lower)) {
+      clipsMap.get(lower).paused = true;
+    }
   }
 }
 
@@ -749,6 +816,7 @@ function setupUIEventListeners() {
   document.getElementById('btn-play-pause').addEventListener('click', () => togglePlayPause());
   document.getElementById('btn-stop-anim').addEventListener('click', () => {
     togglePlayPause(false);
+    if (mixer) clipsMap.forEach(a => a.stop());
     resetAllBones(true);
   });
 
@@ -764,9 +832,7 @@ function setupUIEventListeners() {
     card.addEventListener('click', () => {
       document.querySelectorAll('.anim-card').forEach(c => c.classList.remove('active'));
       card.classList.add('active');
-      currentAnim = card.dataset.anim;
-      resetAllBones(false);
-      togglePlayPause(true);
+      playAnimation(card.dataset.anim);
     });
   });
 
@@ -896,7 +962,14 @@ function animate() {
   requestAnimationFrame(animate);
 
   const delta = Math.min(animClock.getDelta(), 0.1);
-  updateProceduralAnimations(delta);
+  if (isPlaying) {
+    const lower = currentAnim.toLowerCase();
+    if (mixer && clipsMap.has(lower)) {
+      mixer.update(delta * animSpeed);
+    } else {
+      updateProceduralAnimations(delta);
+    }
+  }
 
   orbitControls.update();
   updateJointMarkers();
