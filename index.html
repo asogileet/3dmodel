@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D 角色骨骼操作平台 | 3D Character Rigging & Animation Studio</title>
+  <link rel="stylesheet" href="style.css?v=2.2">
+  <!-- Import map for Three.js ES Modules -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="app-container">
+    <!-- 3D Viewport Area -->
+    <main id="viewport-container">
+      <div class="viewport-header">
+        <h1>3D Character Studio</h1>
+        <select id="model-select" title="切換 3D 模型">
+          <option value="miku_psp_with_bones_fixed.glb" selected>初音未來 (Hatsune Miku - 輕量極速 300KB)</option>
+          <option value="gloria_rigged.glb">Gloria (Tripo 3D - 高精細 110MB)</option>
+        </select>
+        <span class="badge" id="model-status-badge">載入中...</span>
+      </div>
+
+      <div class="viewport-toolbar">
+        <button class="tool-btn active" id="btn-toggle-skeleton" title="開關骨架顯示">
+          <span>🦴</span> 骨架輔助線
+        </button>
+        <button class="tool-btn active" id="btn-toggle-gizmo" title="切換 3D 關節操作軸">
+          <span>🔄</span> 3D 旋轉軸
+        </button>
+        <button class="tool-btn" id="btn-reset-view" title="重設視角">
+          <span>🎯</span> 重設視角
+        </button>
+        <button class="tool-btn" id="btn-screenshot" title="截圖儲存">
+          <span>📷</span> 截圖
+        </button>
+      </div>
+
+      <canvas id="canvas3d"></canvas>
+    </main>
+
+    <!-- Sidebar Controls -->
+    <aside id="sidebar">
+      <nav class="tabs-nav">
+        <button class="tab-btn active" data-tab="tab-pose">
+          <span>🦴</span>
+          <span>關節操控</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-anims">
+          <span>💃</span>
+          <span>動作庫</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-env">
+          <span>💡</span>
+          <span>光影材質</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-info">
+          <span>📊</span>
+          <span>資訊</span>
+        </button>
+      </nav>
+
+      <div class="tabs-content">
+        <!-- Tab 1: Pose & Joint Controls -->
+        <section class="tab-pane active" id="tab-pose">
+          <div class="hint-card">
+            💡 <strong>操作提示</strong>：在 3D 畫面直接點擊關節點球即可叫出 3D 旋轉軸旋轉，或使用下方選單與角度滑桿精準控制！
+          </div>
+
+          <div class="control-card">
+            <div class="card-title">選擇操作關節</div>
+            <div class="form-group">
+              <select id="joint-select">
+                <option value="">-- 請選擇關節 --</option>
+              </select>
+            </div>
+            <div class="grid-2">
+              <button class="btn" id="btn-reset-current-bone">重設此關節</button>
+              <button class="btn btn-primary" id="btn-reset-all-pose">重設全身 T 姿</button>
+            </div>
+          </div>
+
+          <div class="control-card" id="bone-sliders-card">
+            <div class="card-title">關節旋轉 (FK Sliders)</div>
+            
+            <div class="form-group">
+              <div class="form-label">
+                <span>X 軸 (俯仰 Pitch)</span>
+                <span class="form-value" id="val-rot-x">0°</span>
+              </div>
+              <div class="slider-row">
+                <input type="range" id="slider-rot-x" min="-180" max="180" value="0" step="1">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <div class="form-label">
+                <span>Y 軸 (偏航 Yaw)</span>
+                <span class="form-value" id="val-rot-y">0°</span>
+              </div>
+              <div class="slider-row">
+                <input type="range" id="slider-rot-y" min="-180" max="180" value="0" step="1">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <div class="form-label">
+                <span>Z 軸 (翻滾 Roll)</span>
+                <span class="form-value" id="val-rot-z">0°</span>
+              </div>
+              <div class="slider-row">
+                <input type="range" id="slider-rot-z" min="-180" max="180" value="0" step="1">
+              </div>
+            </div>
+          </div>
+
+          <div class="control-card">
+            <div class="card-title">常用部位快捷</div>
+            <div class="grid-2" id="quick-bones-grid">
+              <button class="btn" data-quick-bone="Head">頭部 Head</button>
+              <button class="btn" data-quick-bone="Chest">胸部 Chest</button>
+              <button class="btn" data-quick-bone="LeftTwintail_1">左雙馬尾 L-Hair</button>
+              <button class="btn" data-quick-bone="RightTwintail_1">右雙馬尾 R-Hair</button>
+              <button class="btn" data-quick-bone="LeftUpperArm">左手臂 L-Arm</button>
+              <button class="btn" data-quick-bone="RightUpperArm">右手臂 R-Arm</button>
+              <button class="btn" data-quick-bone="LeftUpperLeg">左大腿 L-Leg</button>
+              <button class="btn" data-quick-bone="RightUpperLeg">右大腿 R-Leg</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tab 2: Preset Animations -->
+        <section class="tab-pane" id="tab-anims">
+          <div class="control-card">
+            <div class="card-title">動畫播放控制器</div>
+            <div class="grid-2">
+              <button class="btn btn-primary" id="btn-play-pause">
+                <span id="play-pause-icon">⏸️</span> 暫停 / 播放
+              </button>
+              <button class="btn" id="btn-stop-anim">
+                <span>⏹️</span> 停止動作
+              </button>
+            </div>
+            <div class="form-group">
+              <div class="form-label">
+                <span>播放速度 (Speed)</span>
+                <span class="form-value" id="val-anim-speed">1.0x</span>
+              </div>
+              <div class="slider-row">
+                <input type="range" id="slider-anim-speed" min="0.2" max="2.0" value="1.0" step="0.1">
+              </div>
+            </div>
+          </div>
+
+          <div class="control-card">
+            <div class="card-title">預設動作庫</div>
+            
+            <div class="anim-card active" data-anim="idle">
+              <div class="anim-card-left">
+                <span class="anim-icon">🌬️</span>
+                <div>
+                  <div class="anim-name">待機呼吸 (Idle Breathing)</div>
+                  <div class="anim-status">微幅胸腔起伏與雙馬尾輕擺</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="anim-card" data-anim="walk">
+              <div class="anim-card-left">
+                <span class="anim-icon">🚶</span>
+                <div>
+                  <div class="anim-name">踏步前行 (Walk Cycle)</div>
+                  <div class="anim-status">四肢協調擺動與頭髮動態晃動</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="anim-card" data-anim="dance">
+              <div class="anim-card-left">
+                <span class="anim-icon">💃</span>
+                <div>
+                  <div class="anim-name">活力律動 (Dance Groove)</div>
+                  <div class="anim-status">全身節奏搖擺與雙臂律動</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="anim-card" data-anim="wave">
+              <div class="anim-card-left">
+                <span class="anim-icon">👋</span>
+                <div>
+                  <div class="anim-name">熱情揮手 (Wave Hand)</div>
+                  <div class="anim-status">舉起右手熱情打招呼</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="anim-card" data-anim="salute">
+              <div class="anim-card-left">
+                <span class="anim-icon">🫡</span>
+                <div>
+                  <div class="anim-name">致敬敬禮 (Salute)</div>
+                  <div class="anim-status">立正抬手標準敬禮</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="anim-card" data-anim="bow">
+              <div class="anim-card-left">
+                <span class="anim-icon">🙇</span>
+                <div>
+                  <div class="anim-name">禮貌鞠躬 (Bow)</div>
+                  <div class="anim-status">優雅前傾鞠躬表達謝意</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tab 3: Environment & Materials -->
+        <section class="tab-pane" id="tab-env">
+          <div class="control-card">
+            <div class="card-title">材質呈現 (Shading)</div>
+            <div class="grid-2">
+              <button class="btn active" id="btn-mat-texture">標準貼圖</button>
+              <button class="btn" id="btn-mat-wireframe">線框模式</button>
+              <button class="btn" id="btn-mat-clay">石膏黏土</button>
+              <button class="btn" id="btn-mat-normal">法線色彩</button>
+            </div>
+          </div>
+
+          <div class="control-card">
+            <div class="card-title">光照與陰影</div>
+            <div class="form-group">
+              <div class="form-label">
+                <span>主光源強度</span>
+                <span class="form-value" id="val-light-dir">1.2</span>
+              </div>
+              <input type="range" id="slider-light-dir" min="0" max="3" value="1.2" step="0.1">
+            </div>
+
+            <div class="form-group">
+              <div class="form-label">
+                <span>環境光強度</span>
+                <span class="form-value" id="val-light-amb">0.85</span>
+              </div>
+              <input type="range" id="slider-light-amb" min="0" max="2" value="0.85" step="0.1">
+            </div>
+
+            <div class="grid-2">
+              <button class="btn active" id="btn-toggle-shadow">地板陰影</button>
+              <button class="btn active" id="btn-toggle-grid">地面網格</button>
+            </div>
+          </div>
+
+          <div class="control-card">
+            <div class="card-title">背景顏色</div>
+            <div class="grid-3">
+              <button class="btn active" data-bg="#12151f">深空黑</button>
+              <button class="btn" data-bg="#282f3f">暮光灰</button>
+              <button class="btn" data-bg="#1e293b">冷調藍</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tab 4: Model Info -->
+        <section class="tab-pane" id="tab-info">
+          <div class="control-card">
+            <div class="card-title">模型規格 (Specs)</div>
+            <div class="form-group">
+              <div class="form-label"><span>模型名稱</span><span class="form-value" id="info-name">Hatsune Miku</span></div>
+              <div class="form-label"><span>檔案大小</span><span class="form-value" id="info-filesize">~300 KB</span></div>
+              <div class="form-label"><span>網格區塊數</span><span class="form-value" id="info-meshes">11 Meshes</span></div>
+              <div class="form-label"><span>骨骼關節數</span><span class="form-value" id="info-bones">87 Joints</span></div>
+              <div class="form-label"><span>即時 FPS</span><span class="form-value" id="info-fps">60 FPS</span></div>
+            </div>
+          </div>
+
+          <div class="control-card">
+            <div class="card-title">骨架層級結構摘要</div>
+            <pre id="hierarchy-preview" style="font-size:0.72rem; color:#a5b4fc; background:#12141c; padding:10px; border-radius:6px; line-height:1.5; overflow-x:auto;">
+Root
+└── Center (骨盆)
+    ├── Spine (脊椎)
+    │   └── Chest (胸腔)
+    │       ├── Neck -> Head (頭部)
+    │       │   ├── LeftTwintail (左雙馬尾 1..3)
+    │       │   └── RightTwintail (右雙馬尾 1..3)
+    │       ├── LeftShoulder -> Arm -> Hand (左手)
+    │       └── RightShoulder -> Arm -> Hand (右手)
+    └── Hips (下半身)
+        ├── Skirt (前後左右裙襬)
+        ├── LeftUpperLeg -> Knee -> Foot (左腿)
+        └── RightUpperLeg -> Knee -> Foot (右腿)
+            </pre>
+          </div>
+        </section>
+      </div>
+    </aside>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay">
+      <div class="spinner"></div>
+      <div class="loading-text" id="loading-title">正在載入 3D 模型...</div>
+      <div class="loading-bar-wrap">
+        <div class="loading-bar" id="loading-progress"></div>
+      </div>
+      <div class="loading-detail" id="loading-detail">準備環境中...</div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js?v=2.2"></script>
+</body>
+</html>

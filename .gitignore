@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+*Zone.Identifier*
+
+# GitHub 檔案大小限制為 100MB，gloria_rigged.glb (~115MB) 需透過 Git LFS 或外鏈儲存
+# 若直接 push 會被 GitHub 拒絕 (remote: error: GH001)
+gloria*.glb
+miku_psp_with_bones_fixed_orig.glb
+miku_clean.glb
