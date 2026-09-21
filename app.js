@@ -141,7 +141,12 @@ function init() {
   window.addEventListener('resize', onWindowResize);
   canvas.addEventListener('pointerdown', onCanvasPointerDown);
 
-  // 9. Load Default Model (Miku)
+  // 9. Force default model to Miku
+  if (modelSelect) {
+    modelSelect.value = 'miku_psp_with_bones_fixed.glb';
+  }
+  currentModelFile = 'miku_psp_with_bones_fixed.glb';
+  console.log('[3D Studio v3.5] Force default model: Miku (miku_psp_with_bones_fixed.glb)');
   loadModel(currentModelFile);
 
   // 10. Start Loop
@@ -181,7 +186,7 @@ function loadModel(modelUrl) {
   loadingProgress.style.width = '0%';
 
   const loader = new GLTFLoader();
-  const fetchUrl = modelUrl + (modelUrl.includes('?') ? '&' : '?') + 'v=2.2';
+  const fetchUrl = modelUrl + (modelUrl.includes('?') ? '&' : '?') + 'v=3.5';
 
   loader.load(
     fetchUrl,

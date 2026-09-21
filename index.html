@@ -3,8 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>3D 角色骨骼操作平台 | 3D Character Rigging & Animation Studio</title>
-  <link rel="stylesheet" href="style.css?v=2.2">
+  <link rel="stylesheet" href="style.css?v=3.5">
   <!-- Import map for Three.js ES Modules -->
   <script type="importmap">
     {
@@ -21,7 +24,7 @@
     <main id="viewport-container">
       <div class="viewport-header">
         <h1>3D Character Studio</h1>
-        <select id="model-select" title="切換 3D 模型">
+        <select id="model-select" autocomplete="off" title="切換 3D 模型">
           <option value="miku_psp_with_bones_fixed.glb" selected>初音未來 (Hatsune Miku - 輕量極速 300KB)</option>
           <option value="gloria_rigged.glb">Gloria (Tripo 3D - 高精細 110MB)</option>
         </select>
@@ -316,6 +319,6 @@ Root
     </div>
   </div>
 
-  <script type="module" src="app.js?v=2.2"></script>
+  <script type="module" src="app.js?v=3.5"></script>
 </body>
 </html>
