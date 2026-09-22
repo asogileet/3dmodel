@@ -334,7 +334,7 @@ function drawBlush(ctx, cx, cy) {
 // -----------------------------------------------------------------------------
 function loadModularModel() {
   const loader = new GLTFLoader();
-  const url = 'anime_avatar_modular.glb?v=1.1';
+  const url = 'anime_avatar_modular.glb?v=1.2';
 
   exportModal.style.display = 'flex';
   modalTitle.textContent = '載入日系卡漫紙娃娃中...';
@@ -358,11 +358,13 @@ function loadModularModel() {
             child.material = new THREE.MeshBasicMaterial({
               map: eyeTexture,
               transparent: true,
-              alphaTest: 0.05,
+              alphaTest: 0.02,
               depthWrite: false,
               polygonOffset: true,
-              polygonOffsetFactor: -4
+              polygonOffsetFactor: -4,
+              side: THREE.DoubleSide
             });
+            child.renderOrder = 10;
           }
         }
       });
@@ -451,7 +453,7 @@ function applyColors() {
   const cfg = avatarConfig;
 
   allMeshes.forEach((mesh) => {
-    if (!mesh.material) return;
+    if (!mesh.material || mesh.name === 'Face_Eyes') return;
     const matName = mesh.material.name || '';
 
     if (matName.includes('Skin') || mesh.name.includes('Body')) {

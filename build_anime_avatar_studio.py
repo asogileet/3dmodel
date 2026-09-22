@@ -343,23 +343,46 @@ def create_anime_body(name, gender='female'):
     obj.data.materials.append(mat_skin)
     return obj
 
-# 3. Anime Eye Decals (Curved Eye Planes for Live Expressions)
+# 3. Anime Face Decal (Curved Mesh matching Anime Face with UV coordinates for Live Canvas Eyes/Mouth)
 def create_anime_eyes(name):
     bm = bmesh.new()
-    for side in [1.0, -1.0]:
-        cx = side * 0.075
-        cy = 0.148
-        cz = 0.845
-        w = 0.038
-        h = 0.042
+    uv_layer = bm.loops.layers.uv.verify()
 
-        # Curved 4-vertex quad matching anime face contour
-        v1 = bm.verts.new((cx - side * w, cy - 0.008, cz + h))
-        v2 = bm.verts.new((cx + side * w, cy + 0.002, cz + h))
-        v3 = bm.verts.new((cx + side * w, cy + 0.002, cz - h))
-        v4 = bm.verts.new((cx - side * w, cy - 0.008, cz - h))
+    nx = 7
+    nz = 7
+    verts = []
+    for j in range(nz):
+        v = j / (nz - 1)
+        z = 0.72 + v * 0.21
+        dz = z - 0.85
+        r_xy = math.sqrt(max(0.01, 0.175**2 - dz**2))
+        if z < 0.83:
+            t = (0.83 - z) / 0.11
+            r_xy *= (1.0 - t * 0.22)
+        w_x = 0.24 * (r_xy / 0.175)
+        row = []
+        for i in range(nx):
+            u = i / (nx - 1)
+            x = (u - 0.5) * w_x
+            y = math.sqrt(max(0.0001, r_xy**2 - x**2)) + 0.005
+            vert = bm.verts.new((x, y, z))
+            row.append((vert, u, v))
+        verts.append(row)
+    bm.verts.ensure_lookup_table()
 
-        bm.faces.new([v1, v2, v3, v4])
+    for j in range(nz - 1):
+        for i in range(nx - 1):
+            v0, u0, v_0 = verts[j][i]
+            v1, u1, v_1 = verts[j][i + 1]
+            v2, u2, v_2 = verts[j + 1][i + 1]
+            v3, u3, v_3 = verts[j + 1][i]
+
+            face = bm.faces.new([v0, v3, v2, v1])
+            for loop in face.loops:
+                if loop.vert == v0: loop[uv_layer].uv = (u0, v_0)
+                elif loop.vert == v1: loop[uv_layer].uv = (u1, v_1)
+                elif loop.vert == v2: loop[uv_layer].uv = (u2, v_2)
+                elif loop.vert == v3: loop[uv_layer].uv = (u3, v_3)
 
     mesh = bpy.data.meshes.new(name)
     bm.to_mesh(mesh)
@@ -367,28 +390,35 @@ def create_anime_eyes(name):
 
     obj = bpy.data.objects.new(name, mesh)
     bpy.context.scene.collection.objects.link(obj)
-    mat_eyes = create_anime_material('Mat_Eyes', (0.15, 0.45, 0.95, 1.0), roughness=0.1)
+    mat_eyes = create_anime_material('Mat_Eyes', (1.0, 1.0, 1.0, 1.0), roughness=0.1)
     obj.data.materials.append(mat_eyes)
     return obj
 
 # 4. Hairstyles Builders
-def create_hair_twintails(name):
+def create_hair_cap_bmesh(radius=0.185, z_center=0.87):
     bm = bmesh.new()
-    # Hair Cap
-    bmesh.ops.create_uvsphere(bm, u_segments=16, v_segments=12, radius=0.185)
+    bmesh.ops.create_uvsphere(bm, u_segments=16, v_segments=14, radius=radius)
     for v in bm.verts:
-        v.co.z += 0.87
-        if v.co.z < 0.77: # trim bottom
+        v.co.z += z_center
+        if v.co.z < 0.77:
             v.co.z = 0.77
+    # Cut out face area so eyes/brows/mouth/cheeks are fully visible
+    faces_to_del = [f for f in bm.faces if f.calc_center_median().y > 0.02 and f.calc_center_median().z < 0.92 and abs(f.calc_center_median().x) < 0.135]
+    bmesh.ops.delete(bm, geom=faces_to_del, context='FACES')
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if len(v.link_faces) == 0], context='VERTS')
+    return bm
 
-    # Anime Bangs (Front fringe)
+def create_hair_twintails(name):
+    bm = create_hair_cap_bmesh(radius=0.185, z_center=0.87)
+
+    # Anime Bangs (Front fringe sitting neatly on forehead above eyes: z=0.89 to 0.96)
     for i in range(7):
-        ang = (i - 3) * 0.18
-        x = math.sin(ang) * 0.17
-        y = 0.16 + math.cos(ang) * 0.02
-        z_start = 0.93
-        z_end = 0.85 - abs(i - 3) * 0.015
-        add_capsule_limb(bm, (x, y, z_start), (x * 1.05, y + 0.01, z_end), 0.018, segs=6)
+        ang = (i - 3) * 0.15
+        x = math.sin(ang) * 0.14
+        y = 0.165 + math.cos(ang) * 0.01
+        z_start = 0.96
+        z_end = 0.90 - abs(i - 3) * 0.008
+        add_capsule_limb(bm, (x, y, z_start), (x * 1.04, y + 0.005, z_end), 0.015, segs=6)
 
     # Left & Right Twintails
     for side in [1.0, -1.0]:
@@ -413,21 +443,20 @@ def create_hair_twintails(name):
     return obj
 
 def create_hair_bob(name):
-    bm = bmesh.new()
-    bmesh.ops.create_uvsphere(bm, u_segments=16, v_segments=14, radius=0.19)
+    bm = create_hair_cap_bmesh(radius=0.188, z_center=0.86)
     for v in bm.verts:
-        v.co.z += 0.86
-        # Cute rounded flare
-        if 0.72 < v.co.z < 0.82:
+        if 0.72 < v.co.z < 0.82 and v.co.y < 0.08:
             v.co.x *= 1.08
             v.co.y *= 1.08
-        if v.co.z < 0.72:
-            v.co.z = 0.72
 
     # Front bangs
     for i in range(6):
-        x = (i - 2.5) * 0.045
-        add_capsule_limb(bm, (x, 0.17, 0.94), (x, 0.18, 0.85), 0.02, segs=6)
+        x = (i - 2.5) * 0.04
+        add_capsule_limb(bm, (x, 0.165, 0.96), (x, 0.17, 0.90), 0.016, segs=6)
+
+    # Cute curved cheek-hugging tips
+    for side in [1.0, -1.0]:
+        add_capsule_limb(bm, (side * 0.15, 0.02, 0.84), (side * 0.14, 0.08, 0.73), 0.022, segs=6)
 
     mesh = bpy.data.meshes.new(name)
     bm.to_mesh(mesh)
@@ -439,21 +468,21 @@ def create_hair_bob(name):
     return obj
 
 def create_hair_hime(name):
-    bm = bmesh.new()
-    bmesh.ops.create_uvsphere(bm, u_segments=16, v_segments=14, radius=0.188)
-    for v in bm.verts:
-        v.co.z += 0.87
-        if v.co.z < 0.80 and v.co.y > 0.02:
-            v.co.z = 0.80
+    bm = create_hair_cap_bmesh(radius=0.186, z_center=0.87)
+
+    # Blunt bangs straight across forehead
+    for i in range(7):
+        x = (i - 3) * 0.036
+        add_capsule_limb(bm, (x, 0.165, 0.95), (x, 0.17, 0.895), 0.016, segs=6)
 
     # Long straight back hair down to waist (Z = 0.35)
     for side in [-1, 0, 1]:
         x = side * 0.08
         add_capsule_limb(bm, (x, -0.14, 0.82), (x * 1.2, -0.12, 0.35), 0.04, segs=8)
 
-    # Traditional Hime blunt cheek locks
+    # Traditional Hime blunt cheek locks on sides
     for side in [1.0, -1.0]:
-        add_capsule_limb(bm, (side * 0.16, 0.05, 0.88), (side * 0.15, 0.05, 0.68), 0.025, segs=6)
+        add_capsule_limb(bm, (side * 0.15, 0.05, 0.88), (side * 0.145, 0.06, 0.68), 0.022, segs=6)
 
     mesh = bpy.data.meshes.new(name)
     bm.to_mesh(mesh)
@@ -465,11 +494,7 @@ def create_hair_hime(name):
     return obj
 
 def create_hair_spiky(name):
-    bm = bmesh.new()
-    bmesh.ops.create_uvsphere(bm, u_segments=16, v_segments=12, radius=0.185)
-    for v in bm.verts:
-        v.co.z += 0.87
-        if v.co.z < 0.78: v.co.z = 0.78
+    bm = create_hair_cap_bmesh(radius=0.185, z_center=0.87)
 
     # Anime Shonen Spikes
     spikes = [
@@ -479,8 +504,8 @@ def create_hair_spiky(name):
         ((0.15, -0.05, 0.98), (0.24, -0.06, 1.04), 0.028),
         ((-0.15, -0.05, 0.98), (-0.24, -0.06, 1.04), 0.028),
         ((0.00, -0.15, 0.96), (0.00, -0.22, 1.02), 0.032),
-        ((0.04, 0.16, 0.92), (0.05, 0.20, 0.84), 0.022),
-        ((-0.04, 0.16, 0.92), (-0.05, 0.20, 0.84), 0.022),
+        ((0.04, 0.15, 0.94), (0.05, 0.18, 0.89), 0.018),
+        ((-0.04, 0.15, 0.94), (-0.05, 0.18, 0.89), 0.018),
     ]
     for p_base, p_tip, r in spikes:
         add_capsule_limb(bm, p_base, p_tip, r, segs=6)
@@ -495,16 +520,12 @@ def create_hair_spiky(name):
     return obj
 
 def create_hair_parted(name):
-    bm = bmesh.new()
-    bmesh.ops.create_uvsphere(bm, u_segments=16, v_segments=12, radius=0.186)
-    for v in bm.verts:
-        v.co.z += 0.87
-        if v.co.z < 0.78: v.co.z = 0.78
+    bm = create_hair_cap_bmesh(radius=0.186, z_center=0.87)
 
     # Elegant side parted strands
-    add_capsule_limb(bm, (-0.02, 0.16, 0.96), (0.12, 0.17, 0.86), 0.026, segs=6)
-    add_capsule_limb(bm, (0.08, 0.15, 0.94), (0.16, 0.14, 0.82), 0.024, segs=6)
-    add_capsule_limb(bm, (-0.06, 0.15, 0.95), (-0.14, 0.14, 0.86), 0.024, segs=6)
+    add_capsule_limb(bm, (-0.02, 0.15, 0.96), (0.12, 0.16, 0.89), 0.020, segs=6)
+    add_capsule_limb(bm, (0.08, 0.14, 0.94), (0.16, 0.13, 0.84), 0.020, segs=6)
+    add_capsule_limb(bm, (-0.06, 0.14, 0.95), (-0.14, 0.13, 0.88), 0.020, segs=6)
 
     mesh = bpy.data.meshes.new(name)
     bm.to_mesh(mesh)
