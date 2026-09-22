@@ -786,21 +786,32 @@ def add_avatar_actions(arm_obj):
         insert_rot('LeftUpperArm', f, arm_l, 0, 0.4)
         insert_rot('RightUpperArm', f, arm_r, 0, -0.4)
 
-    # 4. Wave (40 frames)
+    # 4. Wave (40 frames - natural greeting wave high up beside head)
     wave = bpy.data.actions.new(name='Wave')
     arm_obj.animation_data.action = wave
-    insert_rot('RightUpperArm', 1, 0.2, 0, -1.8)
-    insert_rot('RightUpperArm', 40, 0.2, 0, -1.8)
-    for f, r_fore_z in [(1, -0.2), (10, -0.7), (20, -0.2), (30, -0.7), (40, -0.2)]:
-        insert_rot('RightLowerArm', f, 0, 0, r_fore_z)
+    insert_rot('RightUpperArm', 1, 0.5, 0.0, -1.2)
+    insert_rot('RightUpperArm', 40, 0.5, 0.0, -1.2)
+    for f, r_val in [(1, 1.2), (10, 1.6), (20, 1.2), (30, 1.6), (40, 1.2)]:
+        insert_rot('RightLowerArm', f, r_val, 0.0, 0.0)
+    insert_rot('Head', 1, 0.05, -0.12, 0.10)
+    insert_rot('Head', 40, 0.05, -0.12, 0.10)
 
-    # 5. Pose (Cute Idol Peace Pose)
+    # 5. Salute (40 frames - right hand to right eyebrow/temple)
+    salute = bpy.data.actions.new(name='Salute')
+    arm_obj.animation_data.action = salute
+    for f in [1, 40]:
+        insert_rot('RightUpperArm', f, 0.0, 0.5, -0.3)
+        insert_rot('RightLowerArm', f, 2.3, 0.0, 0.0)
+        insert_rot('Chest', f, 0.05, 0.0, 0.0)
+        insert_rot('Head',  f, -0.04, 0.0, 0.0)
+
+    # 6. Pose (Cute Idol Peace Pose)
     pose = bpy.data.actions.new(name='Pose')
     arm_obj.animation_data.action = pose
     insert_rot('Head', 1, 0.05, -0.15, 0.18)
     insert_rot('Hips', 1, 0.05, 0.12, -0.08)
-    insert_rot('RightUpperArm', 1, 0.35, 0.20, -1.45)
-    insert_rot('RightLowerArm', 1, 1.20, 0.00, -0.45)
+    insert_rot('RightUpperArm', 1, 0.35, 0.10, -0.85)
+    insert_rot('RightLowerArm', 1, 2.10, 0.00, 0.00)
     insert_rot('LeftUpperArm', 1, -0.15, 0.00, 0.35)
     insert_rot('LeftUpperLeg', 1, -0.10, 0.00, 0.05)
     insert_rot('RightUpperLeg', 1, 0.15, 0.00, -0.08)

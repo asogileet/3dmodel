@@ -185,14 +185,25 @@ def add_actions(arm_obj):
         insert_rot('LeftUpperArm', f, arm_l, 0, 0.4)
         insert_rot('RightUpperArm', f, arm_r, 0, -0.4)
         
-    # --- 4. WAVE (40 frames) ---
+    # --- 4. WAVE (40 frames - natural greeting wave high up beside head) ---
     wave_act = bpy.data.actions.new(name='Wave')
     arm_obj.animation_data.action = wave_act
     
-    insert_rot('RightUpperArm', 1, 0.2, 0, -1.8)
-    insert_rot('RightUpperArm', 40, 0.2, 0, -1.8)
-    for f, r_fore_z in [(1, -0.2), (10, -0.7), (20, -0.2), (30, -0.7), (40, -0.2)]:
-        insert_rot('RightLowerArm', f, 0, 0, r_fore_z)
+    insert_rot('RightUpperArm', 1, 0.5, 0.0, -1.2)
+    insert_rot('RightUpperArm', 40, 0.5, 0.0, -1.2)
+    for f, r_val in [(1, 1.2), (10, 1.6), (20, 1.2), (30, 1.6), (40, 1.2)]:
+        insert_rot('RightLowerArm', f, r_val, 0.0, 0.0)
+    insert_rot('Head', 1, 0.05, -0.12, 0.10)
+    insert_rot('Head', 40, 0.05, -0.12, 0.10)
+
+    # --- 5. SALUTE (40 frames - right hand to right eyebrow/temple) ---
+    salute_act = bpy.data.actions.new(name='Salute')
+    arm_obj.animation_data.action = salute_act
+    for f in [1, 40]:
+        insert_rot('RightUpperArm', f, 0.0, 0.5, -0.3)
+        insert_rot('RightLowerArm', f, 2.3, 0.0, 0.0)
+        insert_rot('Chest', f, 0.05, 0.0, 0.0)
+        insert_rot('Head',  f, -0.04, 0.0, 0.0)
         
     # Set Idle as active action
     arm_obj.animation_data.action = idle_act

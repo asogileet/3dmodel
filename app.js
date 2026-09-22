@@ -668,33 +668,38 @@ function updateProceduralAnimations(delta) {
     }
   }
   else if (currentAnim === 'wave') {
-    const wave = Math.sin(t * 7.5) * 0.55;
+    const wave = Math.sin(t * 7.5) * 0.45;
     if (rArm) {
-      rArm.rotation.z = -1.8;
-      rArm.rotation.x = 0.3;
+      rArm.rotation.z = -2.1;
+      rArm.rotation.y = 0.35;
+      rArm.rotation.x = -0.20;
     }
     if (rFore) {
-      rFore.rotation.z = -0.4 + wave;
-      rFore.rotation.x = 0.2;
+      rFore.rotation.y = 0.45;
+      rFore.rotation.z = 0.35 + wave;
     }
     if (head) {
-      head.rotation.y = -0.25;
-      head.rotation.z = 0.15;
+      head.rotation.y = -0.15;
+      head.rotation.z = 0.12;
     }
-    if (rHair1) rHair1.rotation.z = -0.3 + wave * 0.2;
+    if (rHair1) rHair1.rotation.z = -0.15 + wave * 0.15;
   }
   else if (currentAnim === 'salute') {
     if (rArm) {
-      rArm.rotation.z = -1.3;
-      rArm.rotation.x = 0.45;
-      rArm.rotation.y = 0.5;
+      rArm.rotation.z = -1.15;
+      rArm.rotation.y = -0.35;
+      rArm.rotation.x = 0.20;
     }
     if (rFore) {
-      rFore.rotation.x = 1.4;
-      rFore.rotation.z = -0.45;
+      rFore.rotation.z = -2.05;
+      rFore.rotation.y = 0.35;
+      rFore.rotation.x = -0.25;
     }
-    if (chest) chest.rotation.x = -0.08;
-    if (head) head.rotation.x = 0.05;
+    if (chest) chest.rotation.x = -0.06;
+    if (head) {
+      head.rotation.x = 0.05;
+      head.rotation.y = -0.05;
+    }
   }
   else if (currentAnim === 'bow') {
     const bowCycle = Math.sin(t * 1.8);
