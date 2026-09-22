@@ -56,9 +56,11 @@ function init() {
   scene.background = new THREE.Color(0x0a0f1d);
 
   // 2. Camera Setup
-  const aspect = canvas.clientWidth / canvas.clientHeight;
+  const w = canvas.clientWidth || (window.innerWidth - 380);
+  const h = canvas.clientHeight || (window.innerHeight - 60);
+  const aspect = w / h;
   camera = new THREE.PerspectiveCamera(40, aspect, 0.1, 100);
-  camera.position.set(0, 0.85, 2.8);
+  camera.position.set(0, 0.1, 2.7);
 
   // 3. Renderer Setup
   renderer = new THREE.WebGLRenderer({
@@ -66,7 +68,7 @@ function init() {
     antialias: true,
     preserveDrawingBuffer: true
   });
-  renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+  renderer.setSize(w, h);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -74,10 +76,10 @@ function init() {
   renderer.toneMappingExposure = 1.05;
 
   // 4. OrbitControls
-  orbitControls = new THREE.OrbitControls(camera, canvas);
+  orbitControls = new OrbitControls(camera, renderer.domElement);
   orbitControls.enableDamping = true;
   orbitControls.dampingFactor = 0.08;
-  orbitControls.target.set(0, 0.45, 0);
+  orbitControls.target.set(0, 0.05, 0);
   orbitControls.maxPolarAngle = Math.PI / 2 + 0.05;
   orbitControls.minDistance = 0.4;
   orbitControls.maxDistance = 5.0;
@@ -332,7 +334,11 @@ function drawBlush(ctx, cx, cy) {
 // -----------------------------------------------------------------------------
 function loadModularModel() {
   const loader = new GLTFLoader();
-  const url = 'anime_avatar_modular.glb?v=1.0';
+  const url = 'anime_avatar_modular.glb?v=1.1';
+
+  exportModal.style.display = 'flex';
+  modalTitle.textContent = '載入日系卡漫紙娃娃中...';
+  modalDesc.textContent = '初始化 16 款動漫模組與 3D 骨架中，請稍候';
 
   loader.load(
     url,
@@ -378,10 +384,16 @@ function loadModularModel() {
 
       // Play Idle Animation
       playAnimation(currentAnimName);
+
+      // Hide loading modal
+      exportModal.style.display = 'none';
+      onWindowResize();
     },
     undefined,
     (err) => {
       console.error('Error loading anime avatar modular model:', err);
+      modalTitle.textContent = '模型載入失敗';
+      modalDesc.textContent = err.message || '請確認網路連線或重新整理頁面。';
     }
   );
 }
@@ -503,14 +515,14 @@ function setCameraPreset(preset) {
   if (!orbitControls) return;
 
   if (preset === 'full') {
-    camera.position.set(0, 0.85, 2.8);
-    orbitControls.target.set(0, 0.45, 0);
+    camera.position.set(0, 0.1, 2.7);
+    orbitControls.target.set(0, 0.05, 0);
   } else if (preset === 'face') {
-    camera.position.set(0, 0.88, 0.70);
-    orbitControls.target.set(0, 0.86, 0);
+    camera.position.set(0, 0.82, 0.70);
+    orbitControls.target.set(0, 0.80, 0);
   } else if (preset === 'torso') {
-    camera.position.set(0, 0.68, 1.45);
-    orbitControls.target.set(0, 0.55, 0);
+    camera.position.set(0, 0.45, 1.45);
+    orbitControls.target.set(0, 0.35, 0);
   }
   orbitControls.update();
 }
@@ -708,6 +720,19 @@ function setupEventListeners() {
     });
   });
 
+  const outlineBtn = document.getElementById('btn-toggle-outline');
+  if (outlineBtn) {
+    outlineBtn.addEventListener('click', () => {
+      avatarConfig.showOutline = !avatarConfig.showOutline;
+      outlineBtn.classList.toggle('active', avatarConfig.showOutline);
+      allMeshes.forEach(mesh => {
+        if (mesh.material && !mesh.name.includes('Eyes')) {
+          mesh.material.roughness = avatarConfig.showOutline ? 0.8 : 0.4;
+        }
+      });
+    });
+  }
+
   document.getElementById('btn-reset-cam').addEventListener('click', () => {
     setCameraPreset('full');
   });
@@ -749,8 +774,8 @@ function randomizeAvatar() {
 }
 
 function onWindowResize() {
-  const w = canvas.clientWidth;
-  const h = canvas.clientHeight;
+  const w = canvas.clientWidth || (window.innerWidth - 380);
+  const h = canvas.clientHeight || (window.innerHeight - 60);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
