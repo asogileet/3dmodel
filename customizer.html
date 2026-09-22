@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>日系卡漫 3D 紙娃娃系統 | Anime Avatar Studio</title>
+  <link rel="stylesheet" href="customizer.css?v=1.0">
+  <!-- Import map for Three.js ES Modules -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="studio-app">
+    <!-- Top Header Navigation -->
+    <header id="studio-header">
+      <div class="header-left">
+        <span class="logo-icon">✨</span>
+        <h1>Anime Avatar Studio</h1>
+        <span class="badge-version">v1.0 日系卡漫紙娃娃</span>
+      </div>
+      <div class="header-right">
+        <a href="index.html" class="nav-btn-secondary" title="前往 3D 骨架動作操縱平台">
+          <span>🦴</span> 骨架動作平台
+        </a>
+        <button id="btn-export-glb" class="export-btn" title="下載當前自訂組合的標準 3D 模型 (.glb)">
+          <span>💾</span> 匯出 GLB 模型
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Working Area -->
+    <div id="studio-body">
+      <!-- 3D Canvas Area -->
+      <main id="viewport-wrapper">
+        <canvas id="canvas3d"></canvas>
+
+        <!-- Quick Camera & Display Toolbar -->
+        <div class="camera-toolbar">
+          <button class="cam-btn active" data-cam="full" title="全身視角">
+            <span>🧍</span> 全身
+          </button>
+          <button class="cam-btn" data-cam="face" title="臉部特寫">
+            <span>👀</span> 臉部特寫
+          </button>
+          <button class="cam-btn" data-cam="torso" title="半身視角">
+            <span>👕</span> 上半身
+          </button>
+          <div class="toolbar-sep"></div>
+          <button class="cam-btn" id="btn-toggle-outline" title="卡漫黑邊描邊開關">
+            <span>✏️</span> 卡漫描邊
+          </button>
+          <button class="cam-btn" id="btn-random-avatar" title="隨機生成搭配">
+            <span>🎲</span> 隨機造型
+          </button>
+          <button class="cam-btn" id="btn-reset-cam" title="重設相機視角">
+            <span>🎯</span> 重設鏡頭
+          </button>
+        </div>
+
+        <!-- Animation Controls Bottom Bar -->
+        <div class="anim-toolbar">
+          <div class="anim-label">動作預覽:</div>
+          <button class="anim-btn active" data-anim="idle">待機呼吸</button>
+          <button class="anim-btn" data-anim="walk">輕快踏步</button>
+          <button class="anim-btn" data-anim="dance">偶像舞蹈</button>
+          <button class="anim-btn" data-anim="wave">揮手打招呼</button>
+          <button class="anim-btn" data-anim="pose">定格拍照 Pose</button>
+          <div class="anim-sep"></div>
+          <button class="anim-btn" id="btn-play-pause">⏸️</button>
+        </div>
+      </main>
+
+      <!-- Right Customizer Panel -->
+      <aside id="customizer-panel">
+        <!-- Category Navigation Tabs -->
+        <nav class="category-tabs">
+          <button class="cat-tab active" data-cat="gender">
+            <span>👤</span>
+            <span>性別素體</span>
+          </button>
+          <button class="cat-tab" data-cat="hair">
+            <span>💇</span>
+            <span>日系髮型</span>
+          </button>
+          <button class="cat-tab" data-cat="face">
+            <span>👀</span>
+            <span>五官表情</span>
+          </button>
+          <button class="cat-tab" data-cat="outfit">
+            <span>👗</span>
+            <span>日系服裝</span>
+          </button>
+          <button class="cat-tab" data-cat="shoes">
+            <span>👟</span>
+            <span>鞋款配件</span>
+          </button>
+          <button class="cat-tab" data-cat="body">
+            <span>📐</span>
+            <span>體態比例</span>
+          </button>
+        </nav>
+
+        <!-- Panel Contents -->
+        <div class="panel-content-scroll">
+          <!-- 1. Gender & Base Body -->
+          <section class="panel-section active" id="sec-gender">
+            <h2>性別與素體</h2>
+            <div class="card-grid col-2">
+              <div class="opt-card active" data-type="gender" data-val="female">
+                <div class="card-icon">👧</div>
+                <div class="card-title">日系美少女</div>
+                <div class="card-desc">纖細動漫身形、萌系頭身比</div>
+              </div>
+              <div class="opt-card" data-type="gender" data-val="male">
+                <div class="card-icon">👦</div>
+                <div class="card-title">日系美少年</div>
+                <div class="card-desc">挺拔修長、陽光帥氣體格</div>
+              </div>
+            </div>
+
+            <div class="control-group mt-3">
+              <label>皮膚基底色調 (Skin Tone)</label>
+              <div class="color-palette" data-target="skin">
+                <button class="color-dot active" style="background:#fff0ea;" data-color="#fff0ea" title="冷白瓷膚"></button>
+                <button class="color-dot" style="background:#fbe3d5;" data-color="#fbe3d5" title="自然透粉"></button>
+                <button class="color-dot" style="background:#f7d7c4;" data-color="#f7d7c4" title="溫暖柔膚"></button>
+                <button class="color-dot" style="background:#e4bba2;" data-color="#e4bba2" title="健康日曬"></button>
+                <button class="color-dot" style="background:#b3876e;" data-color="#b3876e" title="小麥古銅"></button>
+              </div>
+            </div>
+          </section>
+
+          <!-- 2. Hair Styles & Colors -->
+          <section class="panel-section" id="sec-hair">
+            <h2>日系髮型選擇</h2>
+            <div class="card-grid col-2">
+              <div class="opt-card active" data-type="hair" data-val="Hair_Twintails">
+                <div class="card-icon">👧</div>
+                <div class="card-title">經典雙馬尾</div>
+                <div class="card-desc">齊瀏海 + 動態高馬尾</div>
+              </div>
+              <div class="opt-card" data-type="hair" data-val="Hair_Bob">
+                <div class="card-icon">💇‍♀️</div>
+                <div class="card-title">日系波波短髮</div>
+                <div class="card-desc">俏麗圓潤、空氣瀏海</div>
+              </div>
+              <div class="opt-card" data-type="hair" data-val="Hair_Hime">
+                <div class="card-icon">👩</div>
+                <div class="card-title">黑長直姬髮</div>
+                <div class="card-desc">優雅垂背長直 + 姬鬢角</div>
+              </div>
+              <div class="opt-card" data-type="hair" data-val="Hair_Spiky">
+                <div class="card-icon">👦</div>
+                <div class="card-title">熱血碎短髮</div>
+                <div class="card-desc">少年動漫刺蝟層次</div>
+              </div>
+              <div class="opt-card" data-type="hair" data-val="Hair_Parted">
+                <div class="card-icon">🧑</div>
+                <div class="card-title">清爽三七分</div>
+                <div class="card-desc">文藝學長微捲側分</div>
+              </div>
+              <div class="opt-card" data-type="hair" data-val="none">
+                <div class="card-icon">🚫</div>
+                <div class="card-title">無髮型 (素頭)</div>
+                <div class="card-desc">不穿戴假髮</div>
+              </div>
+            </div>
+
+            <div class="control-group mt-3">
+              <label>經典動漫髮色 (Hair Color)</label>
+              <div class="color-palette" data-target="hair">
+                <button class="color-dot active" style="background:#33c7df;" data-color="#33c7df" title="初音湖水藍"></button>
+                <button class="color-dot" style="background:#ff85a2;" data-color="#ff85a2" title="櫻花粉"></button>
+                <button class="color-dot" style="background:#ffd255;" data-color="#ffd255" title="香檳金"></button>
+                <button class="color-dot" style="background:#26262a;" data-color="#26262a" title="烏木黑"></button>
+                <button class="color-dot" style="background:#6d4834;" data-color="#6d4834" title="栗子深棕"></button>
+                <button class="color-dot" style="background:#e4e6eb;" data-color="#e4e6eb" title="冰雪純白"></button>
+                <button class="color-dot" style="background:#a56de2;" data-color="#a56de2" title="紫水晶"></button>
+                <button class="color-dot" style="background:#ff6644;" data-color="#ff6644" title="熱血赤紅"></button>
+              </div>
+            </div>
+          </section>
+
+          <!-- 3. Face & Expressions -->
+          <section class="panel-section" id="sec-face">
+            <h2>五官與動漫眼神</h2>
+            <div class="card-grid col-2">
+              <div class="opt-card active" data-type="eye_style" data-val="moe">
+                <div class="card-icon">✨</div>
+                <div class="card-title">萌系水汪汪大眼</div>
+                <div class="card-desc">經典雙星光澤、明亮靈動</div>
+              </div>
+              <div class="opt-card" data-type="eye_style" data-val="cool">
+                <div class="card-icon">⚡</div>
+                <div class="card-title">冷傲俐落鳳眼</div>
+                <div class="card-desc">帥氣微傾眼尾、高冷眼神</div>
+              </div>
+              <div class="opt-card" data-type="eye_style" data-val="gentle">
+                <div class="card-icon">🌸</div>
+                <div class="card-title">溫柔療癒垂眼</div>
+                <div class="card-desc">柔和放鬆弧度、純真眼神</div>
+              </div>
+              <div class="opt-card" data-type="eye_style" data-val="cat">
+                <div class="card-icon">🐱</div>
+                <div class="card-title">傲嬌貓咪眼</div>
+                <div class="card-desc">微豎瞳、俏皮上翹眼線</div>
+              </div>
+            </div>
+
+            <div class="control-group mt-3">
+              <label>動漫瞳色 (Iris Color)</label>
+              <div class="color-palette" data-target="iris">
+                <button class="color-dot active" style="background:#2288ff;" data-color="#2288ff" title="海藍寶"></button>
+                <button class="color-dot" style="background:#22cc88;" data-color="#22cc88" title="祖母綠"></button>
+                <button class="color-dot" style="background:#ff3366;" data-color="#ff3366" title="紅寶石"></button>
+                <button class="color-dot" style="background:#ffaa00;" data-color="#ffaa00" title="琥珀金"></button>
+                <button class="color-dot" style="background:#9944ff;" data-color="#9944ff" title="紫水晶"></button>
+                <button class="color-dot" style="background:#333333;" data-color="#333333" title="深邃黑"></button>
+              </div>
+            </div>
+
+            <div class="control-group mt-3">
+              <label>表情與腮紅 (Expression)</label>
+              <div class="card-grid col-3">
+                <button class="btn-sub active" data-expr="smile">微笑 😊</button>
+                <button class="btn-sub" data-expr="wink">眨眼 😉</button>
+                <button class="btn-sub" data-expr="pout">嘟嘴 😗</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- 4. Outfits -->
+          <section class="panel-section" id="sec-outfit">
+            <h2>日系服飾庫</h2>
+            <div class="card-grid col-2">
+              <div class="opt-card active" data-type="outfit" data-val="Outfit_Sailor">
+                <div class="card-icon">🎀</div>
+                <div class="card-title">高校水手百褶裙</div>
+                <div class="card-desc">海軍大翻領 + 蝴蝶結領巾</div>
+              </div>
+              <div class="opt-card" data-type="outfit" data-val="Outfit_Blazer">
+                <div class="card-icon">👔</div>
+                <div class="card-title">英倫高校西裝制服</div>
+                <div class="card-desc">西裝外套 + 襯衫領帶</div>
+              </div>
+              <div class="opt-card" data-type="outfit" data-val="Outfit_Hoodie">
+                <div class="card-icon">🧥</div>
+                <div class="card-title">街頭寬版連帽T</div>
+                <div class="card-desc">慵懶 Oversize + 束口褲</div>
+              </div>
+              <div class="opt-card" data-type="outfit" data-val="Outfit_Casual">
+                <div class="card-icon">👕</div>
+                <div class="card-title">簡約日常休閒裝</div>
+                <div class="card-desc">休閒短T + 修身丹寧褲</div>
+              </div>
+            </div>
+
+            <div class="control-group mt-3">
+              <label>服裝主色系 (Primary Color)</label>
+              <div class="color-palette" data-target="outfit_primary">
+                <button class="color-dot active" style="background:#1e293b;" data-color="#1e293b" title="藏青海藍"></button>
+                <button class="color-dot" style="background:#ffffff; border:1px solid #999;" data-color="#f8fafc" title="純淨白"></button>
+                <button class="color-dot" style="background:#be123c;" data-color="#be123c" title="深酒紅"></button>
+                <button class="color-dot" style="background:#0f766e;" data-color="#0f766e" title="深墨綠"></button>
+                <button class="color-dot" style="background:#3b82f6;" data-color="#3b82f6" title="天空藍"></button>
+                <button class="color-dot" style="background:#18181b;" data-color="#18181b" title="冷酷黑"></button>
+              </div>
+            </div>
+          </section>
+
+          <!-- 5. Shoes & Accessories -->
+          <section class="panel-section" id="sec-shoes">
+            <h2>鞋款與飾品配件</h2>
+            <h3>鞋襪選擇</h3>
+            <div class="card-grid col-2">
+              <div class="opt-card active" data-type="shoes" data-val="Shoes_Loafers">
+                <div class="card-icon">👞</div>
+                <div class="card-title">學生樂福鞋</div>
+                <div class="card-desc">黑色皮鞋 + 高筒及膝襪</div>
+              </div>
+              <div class="opt-card" data-type="shoes" data-val="Shoes_Sneakers">
+                <div class="card-icon">👟</div>
+                <div class="card-title">潮流高筒球鞋</div>
+                <div class="card-desc">運動休閒厚底板鞋</div>
+              </div>
+            </div>
+
+            <h3 class="mt-3">頭部飾品開關</h3>
+            <div class="card-grid col-2">
+              <div class="opt-card toggle-card active" data-toggle="Accessory_CatEars">
+                <div class="card-icon">🐱</div>
+                <div class="card-title">萌系貓耳髮箍</div>
+                <div class="card-desc">點擊開啟 / 隱藏</div>
+              </div>
+              <div class="opt-card toggle-card" data-toggle="Accessory_Glasses">
+                <div class="card-icon">👓</div>
+                <div class="card-title">時尚黑框眼鏡</div>
+                <div class="card-desc">點擊開啟 / 隱藏</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 6. Body Proportions -->
+          <section class="panel-section" id="sec-body">
+            <h2>身形與骨架比例</h2>
+            <div class="slider-box">
+              <div class="slider-header">
+                <span>整體身高比例 (Height)</span>
+                <span id="val-body-height">1.0x</span>
+              </div>
+              <input type="range" id="slider-body-height" min="0.85" max="1.15" step="0.01" value="1.0">
+            </div>
+
+            <div class="slider-box">
+              <div class="slider-header">
+                <span>頭身比 / 頭部縮放 (Head Scale)</span>
+                <span id="val-body-head">1.0x</span>
+              </div>
+              <input type="range" id="slider-body-head" min="0.85" max="1.25" step="0.01" value="1.0">
+            </div>
+
+            <div class="slider-box">
+              <div class="slider-header">
+                <span>肩膀寬度 (Shoulder Width)</span>
+                <span id="val-body-shoulder">1.0x</span>
+              </div>
+              <input type="range" id="slider-body-shoulder" min="0.80" max="1.20" step="0.01" value="1.0">
+            </div>
+
+            <button class="btn-sub mt-3 w-100" id="btn-reset-proportions">🔄 重設為預設動漫比例</button>
+          </section>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Hidden Exporting Modal / Loading Overlay -->
+    <div id="export-modal">
+      <div class="modal-box">
+        <div class="spinner"></div>
+        <div class="modal-title" id="modal-title">正在生成並匯出 GLB 模型...</div>
+        <div class="modal-desc" id="modal-desc">合併部件、骨骼與動態貼圖中，請稍候</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="customizer.js?v=1.0"></script>
+</body>
+</html>

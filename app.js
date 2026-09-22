@@ -331,6 +331,9 @@ function updateSpecsInfo(modelUrl, box) {
   } else if (modelUrl.includes('woman')) {
     displayName = '寫實女性 (Woman Base)';
     displaySize = '~2.9 MB';
+  } else if (modelUrl.includes('anime_avatar')) {
+    displayName = '日系紙娃娃模組 (Anime Avatar Modular)';
+    displaySize = '~0.6 MB';
   } else if (modelUrl.includes('gloria')) {
     displayName = 'Gloria (Tripo 3D)';
     displaySize = '~110 MB';
