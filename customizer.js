@@ -140,6 +140,7 @@ function initFaceCanvas() {
   eyeCtx = eyeCanvas.getContext('2d');
 
   eyeTexture = new THREE.CanvasTexture(eyeCanvas);
+  eyeTexture.flipY = false;
   eyeTexture.colorSpace = THREE.SRGBColorSpace;
   eyeTexture.generateMipmaps = true;
 
