@@ -142,6 +142,7 @@ function init() {
 
   // 8. Event Listeners
   setupEventListeners();
+  syncUiToConfig();
   window.addEventListener('resize', onWindowResize);
 
   // 9. Start Loop
@@ -486,9 +487,11 @@ function applyAvatarConfiguration() {
 
   if (currentLoadedModelType === 'miku') {
     // === MIKU MODULAR PARTS ===
-    // 1. Hair
-    const hasHair = (cfg.hair === 'Hair_Miku_Twintails');
-    setMeshVisibility('Hair_Miku_Twintails', hasHair);
+    // 1. Hair (Supports all 6 hairstyles ported directly to Miku!)
+    const mikuHairs = ['Hair_Miku_Twintails', 'Hair_Bob', 'Hair_Hime', 'Hair_Parted', 'Hair_Spiky', 'Hair_Twintails'];
+    mikuHairs.forEach(h => {
+      setMeshVisibility(h, h === cfg.hair);
+    });
 
     // 2. Head & Facial Features
     setMeshVisibility('Head_Miku', true);
@@ -496,9 +499,20 @@ function applyAvatarConfiguration() {
     setMeshVisibility('Face_Eyes_Right', true);
     setMeshVisibility('Face_Mouth_Miku', true);
 
-    // 3. Outfits
-    const hasOutfit = (cfg.outfit === 'Outfit_Miku_Full' || cfg.outfit === 'Outfit_Miku_Top' || cfg.outfit === 'Outfit_Miku_Uniform');
-    setMeshVisibility('Outfit_Miku_Uniform', hasOutfit);
+    // 3. Outfits (Independent Top & Skirt)
+    if (cfg.outfit === 'Outfit_Miku_Full') {
+      setMeshVisibility('Outfit_Miku_Top', true);
+      setMeshVisibility('Outfit_Miku_Skirt', true);
+    } else if (cfg.outfit === 'Outfit_Miku_Top') {
+      setMeshVisibility('Outfit_Miku_Top', true);
+      setMeshVisibility('Outfit_Miku_Skirt', false);
+    } else if (cfg.outfit === 'Outfit_Miku_Skirt') {
+      setMeshVisibility('Outfit_Miku_Top', false);
+      setMeshVisibility('Outfit_Miku_Skirt', true);
+    } else {
+      setMeshVisibility('Outfit_Miku_Top', false);
+      setMeshVisibility('Outfit_Miku_Skirt', false);
+    }
 
     // 4. Sleeves
     const hasSleeves = cfg.accessories.has('Outfit_Miku_Sleeves');
@@ -834,29 +848,44 @@ function togglePlayPause(play) {
 // -----------------------------------------------------------------------------
 function setCameraPreset(preset) {
   if (!orbitControls || !model) return;
-  const c = modelBounds.center;
-  const maxD = modelBounds.maxDim;
-
-  const headBone = getBone('Head');
-  const chestBone = getBone('Chest') || getBone('Spine');
+  const isMiku = (currentLoadedModelType === 'miku');
 
   if (preset === 'full') {
-    orbitControls.target.set(c.x, c.y, c.z);
-    camera.position.set(c.x, c.y + maxD * 0.08, c.z + maxD * 1.35);
-    orbitControls.minDistance = maxD * 0.15;
-    orbitControls.maxDistance = maxD * 5.0;
+    if (isMiku) {
+      orbitControls.target.set(0, 10.0, 0);
+      camera.position.set(0, 11.0, 27.0);
+      orbitControls.minDistance = 2.0;
+      orbitControls.maxDistance = 200.0;
+    } else {
+      orbitControls.target.set(0, 0.05, 0);
+      camera.position.set(0, 0.15, 2.7);
+      orbitControls.minDistance = 0.2;
+      orbitControls.maxDistance = 20.0;
+    }
   } else if (preset === 'face') {
-    const headTarget = headBone ? headBone.getWorldPosition(new THREE.Vector3()) : new THREE.Vector3(c.x, c.y + maxD * 0.40, c.z);
-    orbitControls.target.copy(headTarget);
-    camera.position.set(headTarget.x, headTarget.y + maxD * 0.02, headTarget.z + maxD * 0.32);
-    orbitControls.minDistance = maxD * 0.05;
-    orbitControls.maxDistance = maxD * 5.0;
+    if (isMiku) {
+      orbitControls.target.set(0, 18.3, 0.5);
+      camera.position.set(0, 18.3, 4.2);
+      orbitControls.minDistance = 0.5;
+      orbitControls.maxDistance = 100.0;
+    } else {
+      orbitControls.target.set(0, 0.70, 0.05);
+      camera.position.set(0, 0.70, 0.45);
+      orbitControls.minDistance = 0.05;
+      orbitControls.maxDistance = 10.0;
+    }
   } else if (preset === 'torso') {
-    const torsoTarget = chestBone ? chestBone.getWorldPosition(new THREE.Vector3()) : new THREE.Vector3(c.x, c.y + maxD * 0.18, c.z);
-    orbitControls.target.copy(torsoTarget);
-    camera.position.set(torsoTarget.x, torsoTarget.y, torsoTarget.z + maxD * 0.70);
-    orbitControls.minDistance = maxD * 0.1;
-    orbitControls.maxDistance = maxD * 5.0;
+    if (isMiku) {
+      orbitControls.target.set(0, 13.8, 0.2);
+      camera.position.set(0, 14.0, 11.5);
+      orbitControls.minDistance = 1.0;
+      orbitControls.maxDistance = 100.0;
+    } else {
+      orbitControls.target.set(0, 0.25, 0.02);
+      camera.position.set(0, 0.28, 1.2);
+      orbitControls.minDistance = 0.1;
+      orbitControls.maxDistance = 10.0;
+    }
   }
   orbitControls.update();
 }
@@ -927,6 +956,17 @@ function exportCustomGLB() {
 // -----------------------------------------------------------------------------
 function syncUiToConfig() {
   const cfg = avatarConfig;
+  const isMiku = (cfg.avatarModel === 'miku');
+
+  // Filter cards by active model
+  document.querySelectorAll('[data-model]').forEach((el) => {
+    const m = el.dataset.model;
+    if (m === 'miku') {
+      el.style.display = isMiku ? '' : 'none';
+    } else if (m === 'procedural') {
+      el.style.display = isMiku ? 'none' : '';
+    }
+  });
 
   // Single select cards
   document.querySelectorAll('.opt-card:not(.toggle-card)').forEach((card) => {
