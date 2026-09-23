@@ -569,9 +569,11 @@ function applyAvatarConfiguration() {
     setMeshVisibility('Face_Mint_Mask', true);
 
     // 3. Outfits
-    const hasSwimsuit = (cfg.outfit === 'Outfit_Mint_Full' || cfg.outfit === 'Outfit_Mint_Bikini');
+    // Note: In commercial anime game models like NTE Mint, the body skin and swimsuit are
+    // unified into a single high-precision skinned mesh to prevent mesh clipping and optimize rendering.
+    // Outfit_Mint_Swimsuit acts as her base body and is kept visible so she never turns into an invisible/floating head.
     const hasSkirt = (cfg.outfit === 'Outfit_Mint_Full' || cfg.outfit === 'Outfit_Mint_SkirtOnly');
-    setMeshVisibility('Outfit_Mint_Swimsuit', hasSwimsuit);
+    setMeshVisibility('Outfit_Mint_Swimsuit', true);
     setMeshVisibility('Outfit_Mint_Skirt', hasSkirt);
 
     // 4. Accessories
