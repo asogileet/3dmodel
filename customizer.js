@@ -365,7 +365,7 @@ function loadModularModel(targetModelType = avatarConfig.avatarModel) {
     title = '載入初音未來模組化紙娃娃中...';
     desc = '初始化 SEGA 高精手繪部件、多款日系假髮與動作庫...';
   } else if (isMint) {
-    url = 'mint_modular.glb?v=1.0';
+    url = 'mint_modular.glb?v=2.0';
     title = '載入薄荷 Mint (Neverness To Everness) 中...';
     desc = '初始化 2D Flat 動漫渲、Unlit Emission 材質與 24 秒官方靈動展示舞步...';
   }

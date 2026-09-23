@@ -193,6 +193,7 @@ function loadModel(modelUrl) {
 
   let titleName = '3D 模型';
   if (modelUrl.includes('miku')) titleName = '初音未來 (Miku)';
+  else if (modelUrl.includes('mint')) titleName = '薄荷 Mint (Neverness To Everness)';
   else if (modelUrl.includes('girl')) titleName = 'T-Pose 少女 (Girl)';
   else if (modelUrl.includes('woman')) titleName = '寫實女性 (Woman)';
   else if (modelUrl.includes('gloria')) titleName = 'Gloria';
@@ -223,10 +224,26 @@ function loadModel(modelUrl) {
       }
 
       // Collect meshes and bones
+      const isMint = modelUrl.includes('mint');
       model.traverse((child) => {
         if (child.isMesh) {
-          child.castShadow = true;
-          child.receiveShadow = true;
+          if (isMint) {
+            // Apply 2D Anime Flat Shading instructions:
+            // "To avoid realistic 3D shading or weird shadows, set Shadow Mode to None for all materials"
+            child.castShadow = false;
+            child.receiveShadow = false;
+            if (child.material) {
+              const mats = Array.isArray(child.material) ? child.material : [child.material];
+              mats.forEach(mat => {
+                mat.transparent = true;
+                mat.alphaTest = 0.05;
+                mat.depthWrite = true;
+              });
+            }
+          } else {
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
           originalMaterials.set(child, child.material);
           if (child.isSkinnedMesh) {
             skinnedMeshes.push(child);
@@ -298,6 +315,8 @@ function loadModel(modelUrl) {
       // Auto select Head bone
       selectBoneByName('Head');
       if (!selectedBone) selectBoneByName('Bone_Head');
+      if (!selectedBone) selectBoneByName('head_adjust_013');
+      if (!selectedBone) selectBoneByName('_rootJoint');
 
       // Play initial animation
       playAnimation(currentAnim);
@@ -733,6 +752,9 @@ function playAnimation(anim) {
     const lower = anim.toLowerCase();
     if (clipsMap.has(lower)) {
       const act = clipsMap.get(lower);
+      act.reset().play();
+    } else if (clipsMap.has('idle')) {
+      const act = clipsMap.get('idle');
       act.reset().play();
     } else {
       resetAllBones(false);
