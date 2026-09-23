@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 
 // Global Studio State
 let scene, camera, renderer, orbitControls;
@@ -47,8 +48,11 @@ const avatarConfig = {
 // Canvas Face / Eye Texture
 let eyeCanvas, eyeCtx, eyeTexture;
 let currentLoadedModelType = null;
-let modelBounds = { center: new THREE.Vector3(0, 0, 0), size: new THREE.Vector3(1, 2, 1), maxDim: 2 };
+let modelBounds = { center: new THREE.Vector3(0, 10, 0), size: new THREE.Vector3(1, 20, 1), maxDim: 20 };
 let dirLight, ambLight, fillLight, rimLight, bottomLight, shadowPlane, grid;
+const bonesMap = new Map();
+const initialBoneRotations = new Map();
+let animTime = 0;
 
 // DOM Elements
 const canvas = document.getElementById('canvas3d');
@@ -68,8 +72,8 @@ function init() {
   const w = canvas.clientWidth || (window.innerWidth - 380);
   const h = canvas.clientHeight || (window.innerHeight - 60);
   const aspect = w / h;
-  camera = new THREE.PerspectiveCamera(40, aspect, 0.1, 100);
-  camera.position.set(0, 0.1, 2.7);
+  camera = new THREE.PerspectiveCamera(40, aspect, 0.1, 500);
+  camera.position.set(0, 11.5, 28);
 
   // 3. Renderer Setup
   renderer = new THREE.WebGLRenderer({
@@ -88,33 +92,33 @@ function init() {
   orbitControls = new OrbitControls(camera, renderer.domElement);
   orbitControls.enableDamping = true;
   orbitControls.dampingFactor = 0.08;
-  orbitControls.target.set(0, 0.05, 0);
+  orbitControls.target.set(0, 10, 0);
   orbitControls.minPolarAngle = 0.01;
   orbitControls.maxPolarAngle = Math.PI - 0.01;
-  orbitControls.minDistance = 0.4;
-  orbitControls.maxDistance = 5.0;
+  orbitControls.minDistance = 0.1;
+  orbitControls.maxDistance = 200.0;
 
   // 5. Lighting (Anime Cel Studio Lighting)
   ambLight = new THREE.AmbientLight(0xfff0f5, 0.85);
   scene.add(ambLight);
 
-  const keyLight = new THREE.DirectionalLight(0xffffff, 1.25);
-  keyLight.position.set(3, 5, 4);
-  keyLight.castShadow = true;
-  keyLight.shadow.mapSize.set(2048, 2048);
-  keyLight.shadow.bias = -0.0005;
-  scene.add(keyLight);
+  dirLight = new THREE.DirectionalLight(0xffffff, 1.25);
+  dirLight.position.set(3, 15, 12);
+  dirLight.castShadow = true;
+  dirLight.shadow.mapSize.set(2048, 2048);
+  dirLight.shadow.bias = -0.0005;
+  scene.add(dirLight);
 
   fillLight = new THREE.DirectionalLight(0x818cf8, 0.55);
-  fillLight.position.set(-3, 3, -2);
+  fillLight.position.set(-10, 10, -5);
   scene.add(fillLight);
 
   rimLight = new THREE.DirectionalLight(0xec4899, 0.45);
-  rimLight.position.set(0, 4, -4);
+  rimLight.position.set(0, 15, -12);
   scene.add(rimLight);
 
   bottomLight = new THREE.DirectionalLight(0x38bdf8, 0.35);
-  bottomLight.position.set(0, -4, 2);
+  bottomLight.position.set(0, -5, 5);
   scene.add(bottomLight);
 
   // Ground Grid & Shadow Plane
@@ -347,9 +351,6 @@ function drawBlush(ctx, cx, cy) {
 // -----------------------------------------------------------------------------
 // Modular Model Loader
 // -----------------------------------------------------------------------------
-// -----------------------------------------------------------------------------
-// Modular Model Loader
-// -----------------------------------------------------------------------------
 function loadModularModel(targetModelType = avatarConfig.avatarModel) {
   const loader = new GLTFLoader();
   const isMiku = (targetModelType === 'miku');
@@ -375,6 +376,8 @@ function loadModularModel(targetModelType = avatarConfig.avatarModel) {
       }
       clipsMap.clear();
       allMeshes.clear();
+      bonesMap.clear();
+      initialBoneRotations.clear();
 
       // 2. Add new model
       model = gltf.scene;
@@ -401,9 +404,13 @@ function loadModularModel(targetModelType = avatarConfig.avatarModel) {
             child.renderOrder = 10;
           }
         }
+        if (child.isBone) {
+          bonesMap.set(child.name, child);
+          initialBoneRotations.set(child.name, child.rotation.clone());
+        }
       });
 
-      console.log(`Loaded ${targetModelType} model with ${allMeshes.size} modular parts.`);
+      console.log(`Loaded ${targetModelType} model with ${allMeshes.size} modular parts, ${bonesMap.size} bones.`);
 
       // 3. Compute dynamic bounding box
       const box = new THREE.Box3().setFromObject(model);
@@ -411,10 +418,31 @@ function loadModularModel(targetModelType = avatarConfig.avatarModel) {
       modelBounds.size = box.getSize(new THREE.Vector3());
       modelBounds.maxDim = Math.max(modelBounds.size.x, modelBounds.size.y, modelBounds.size.z);
 
-      // Adjust shadow plane, grid, and bottom light based on model scale
-      if (shadowPlane) shadowPlane.position.y = box.min.y;
-      if (grid) grid.position.y = box.min.y + 0.001;
-      if (bottomLight) bottomLight.position.set(0, box.min.y - 2, 2);
+      camera.near = Math.max(0.01, modelBounds.maxDim * 0.01);
+      camera.far = Math.max(100, modelBounds.maxDim * 30);
+      camera.updateProjectionMatrix();
+
+      // Adjust ground, shadow plane, and lighting scale
+      const floorY = box.min.y;
+      if (shadowPlane) {
+        shadowPlane.position.y = floorY;
+        shadowPlane.scale.set(modelBounds.maxDim / 2, modelBounds.maxDim / 2, 1);
+      }
+      if (grid) {
+        grid.position.y = floorY + 0.001;
+        grid.scale.set(modelBounds.maxDim / 2, 1, modelBounds.maxDim / 2);
+      }
+      if (dirLight) {
+        dirLight.position.set(modelBounds.center.x + modelBounds.maxDim * 0.5, modelBounds.center.y + modelBounds.maxDim * 0.8, modelBounds.center.z + modelBounds.maxDim * 0.6);
+        dirLight.shadow.camera.left = -modelBounds.maxDim;
+        dirLight.shadow.camera.right = modelBounds.maxDim;
+        dirLight.shadow.camera.top = modelBounds.maxDim * 1.5;
+        dirLight.shadow.camera.bottom = -modelBounds.maxDim * 0.5;
+        dirLight.shadow.camera.updateProjectionMatrix();
+      }
+      if (fillLight) fillLight.position.set(modelBounds.center.x - modelBounds.maxDim * 0.5, modelBounds.center.y + modelBounds.maxDim * 0.4, modelBounds.center.z - modelBounds.maxDim * 0.3);
+      if (rimLight) rimLight.position.set(modelBounds.center.x, modelBounds.center.y + modelBounds.maxDim * 0.5, modelBounds.center.z - modelBounds.maxDim * 0.6);
+      if (bottomLight) bottomLight.position.set(modelBounds.center.x, floorY - modelBounds.maxDim * 0.2, modelBounds.center.z + modelBounds.maxDim * 0.3);
 
       // 4. Setup Animation Mixer
       if (gltf.animations && gltf.animations.length > 0) {
@@ -464,29 +492,22 @@ function applyAvatarConfiguration() {
 
     // 2. Head & Facial Features
     setMeshVisibility('Head_Miku', true);
-    setMeshVisibility('Face_Eyes_Miku', true);
+    setMeshVisibility('Face_Eyes_Left', true);
+    setMeshVisibility('Face_Eyes_Right', true);
     setMeshVisibility('Face_Mouth_Miku', true);
 
     // 3. Outfits
-    if (cfg.outfit === 'Outfit_Miku_Full') {
-      setMeshVisibility('Outfit_Miku_Top', true);
-      setMeshVisibility('Outfit_Miku_Skirt', true);
-    } else if (cfg.outfit === 'Outfit_Miku_Top') {
-      setMeshVisibility('Outfit_Miku_Top', true);
-      setMeshVisibility('Outfit_Miku_Skirt', false);
-    } else if (cfg.outfit === 'Outfit_Miku_Skirt') {
-      setMeshVisibility('Outfit_Miku_Top', false);
-      setMeshVisibility('Outfit_Miku_Skirt', true);
-    } else {
-      setMeshVisibility('Outfit_Miku_Top', false);
-      setMeshVisibility('Outfit_Miku_Skirt', false);
-    }
+    const hasOutfit = (cfg.outfit === 'Outfit_Miku_Full' || cfg.outfit === 'Outfit_Miku_Top' || cfg.outfit === 'Outfit_Miku_Uniform');
+    setMeshVisibility('Outfit_Miku_Uniform', hasOutfit);
 
     // 4. Sleeves
-    setMeshVisibility('Outfit_Miku_Sleeves', cfg.accessories.has('Outfit_Miku_Sleeves'));
+    const hasSleeves = cfg.accessories.has('Outfit_Miku_Sleeves');
+    setMeshVisibility('Outfit_Miku_Sleeves_Left', hasSleeves);
+    setMeshVisibility('Outfit_Miku_Sleeves_Right', hasSleeves);
 
     // 5. Boots
-    setMeshVisibility('Shoes_Miku_Boots', cfg.shoes === 'Shoes_Miku_Boots');
+    const hasBoots = (cfg.shoes === 'Shoes_Miku_Boots');
+    setMeshVisibility('Shoes_Miku_Boots', hasBoots);
 
     // 6. Accessories
     setMeshVisibility('Accessory_Miku_Headset', cfg.accessories.has('Accessory_Miku_Headset'));
@@ -542,7 +563,7 @@ function applyColors() {
       } else if (mName.includes('Outfit') || mName.includes('Dress') || matName.includes('Outfit')) {
         mat.color = new THREE.Color(cfg.colors.outfit_primary);
         mat.needsUpdate = true;
-      } else if (mName.includes('Body') || matName.includes('Skin')) {
+      } else if (mName.includes('Body') || (mName.includes('Skin') && currentLoadedModelType !== 'miku')) {
         mat.color = new THREE.Color(cfg.colors.skin);
         mat.needsUpdate = true;
       }
@@ -558,25 +579,239 @@ function applyProportions() {
   model.scale.set(p.shoulder, p.height, 1.0);
 
   // Head bone scaling
-  const headBone = model.getObjectByName('Head');
+  const headBone = getBone('Head');
   if (headBone) {
     headBone.scale.set(p.head, p.head, p.head);
   }
 }
 
 // -----------------------------------------------------------------------------
-// Animation Control
+// Unified Bone & Animation Control
 // -----------------------------------------------------------------------------
+function getBone(name) {
+  return bonesMap.get(name) || bonesMap.get(`Bone_${name}`) || null;
+}
+
+function resetAllBones() {
+  bonesMap.forEach((bone, name) => {
+    const initRot = initialBoneRotations.get(name);
+    if (initRot) {
+      bone.rotation.copy(initRot);
+    } else {
+      bone.rotation.set(0, 0, 0);
+    }
+  });
+}
+
+function updateProceduralAnimations(delta) {
+  if (!isPlaying || !model) return;
+
+  animTime += delta * animSpeed;
+  const t = animTime;
+
+  const head = getBone('Head');
+  const chest = getBone('Chest');
+  const spine = getBone('Spine');
+  const hips = getBone('Hips') || getBone('Center');
+
+  const lArm = getBone('LeftUpperArm');
+  const lFore = getBone('LeftLowerArm');
+  const rArm = getBone('RightUpperArm');
+  const rFore = getBone('RightLowerArm');
+
+  const lLeg = getBone('LeftUpperLeg');
+  const lKnee = getBone('LeftLowerLeg');
+  const rLeg = getBone('RightUpperLeg');
+  const rKnee = getBone('RightLowerLeg');
+
+  // Miku twintails & skirt
+  const lHair1 = getBone('LeftTwintail_1');
+  const lHair2 = getBone('LeftTwintail_2');
+  const rHair1 = getBone('RightTwintail_1');
+  const rHair2 = getBone('RightTwintail_2');
+  const skirtFL = getBone('Skirt_FrontLeft');
+  const skirtFR = getBone('Skirt_FrontRight');
+  const skirtB = getBone('Skirt_Back');
+
+  if (currentAnimName === 'idle') {
+    const breath = Math.sin(t * 2.2);
+    if (chest) chest.rotation.x = breath * 0.08;
+    if (spine) spine.rotation.x = breath * 0.04;
+    if (head) {
+      head.rotation.x = Math.sin(t * 1.5) * 0.06;
+      head.rotation.y = Math.sin(t * 0.9) * 0.12;
+    }
+    if (lArm) lArm.rotation.z = 0.08 + Math.sin(t * 2.2) * 0.04;
+    if (rArm) rArm.rotation.z = -0.08 - Math.sin(t * 2.2) * 0.04;
+
+    // Twintails gentle swaying in breeze
+    const hairSway = Math.sin(t * 2.0);
+    if (lHair1) lHair1.rotation.z = 0.05 + hairSway * 0.08;
+    if (lHair2) lHair2.rotation.z = 0.08 + hairSway * 0.06;
+    if (rHair1) rHair1.rotation.z = -0.05 - hairSway * 0.08;
+    if (rHair2) rHair2.rotation.z = -0.08 - hairSway * 0.06;
+  }
+  else if (currentAnimName === 'walk') {
+    const cycle = t * 4.2;
+    const sinCycle = Math.sin(cycle);
+    const cosCycle = Math.cos(cycle);
+
+    // Legs
+    if (lLeg) lLeg.rotation.x = sinCycle * 0.55;
+    if (rLeg) rLeg.rotation.x = -sinCycle * 0.55;
+    if (lKnee) lKnee.rotation.x = Math.max(0, -sinCycle * 0.7);
+    if (rKnee) rKnee.rotation.x = Math.max(0, sinCycle * 0.7);
+
+    // Arms
+    if (lArm) lArm.rotation.x = -sinCycle * 0.45;
+    if (rArm) rArm.rotation.x = sinCycle * 0.45;
+
+    // Torso sway
+    if (spine) spine.rotation.y = sinCycle * 0.12;
+    if (hips) hips.rotation.y = -sinCycle * 0.10;
+    if (head) head.rotation.y = -sinCycle * 0.08;
+
+    // Twintails bounce with stride
+    const hairBounce = Math.abs(cosCycle) * 0.2;
+    if (lHair1) {
+      lHair1.rotation.x = -hairBounce;
+      lHair1.rotation.z = 0.1 + sinCycle * 0.15;
+    }
+    if (rHair1) {
+      rHair1.rotation.x = -hairBounce;
+      rHair1.rotation.z = -0.1 + sinCycle * 0.15;
+    }
+
+    // Skirt motion
+    if (skirtFL) skirtFL.rotation.x = Math.max(0, sinCycle * 0.25);
+    if (skirtFR) skirtFR.rotation.x = Math.max(0, -sinCycle * 0.25);
+  }
+  else if (currentAnimName === 'dance') {
+    const beat = t * 4.8;
+    const sway = Math.sin(beat);
+
+    if (hips) {
+      hips.rotation.z = sway * 0.22;
+      hips.rotation.y = Math.cos(beat * 0.5) * 0.25;
+    }
+    if (spine) spine.rotation.z = -sway * 0.18;
+    if (chest) chest.rotation.y = sway * 0.25;
+    if (head) head.rotation.z = sway * 0.18;
+
+    if (rArm) {
+      rArm.rotation.z = -0.6 + Math.sin(beat) * 0.45;
+      rArm.rotation.x = Math.cos(beat) * 0.55;
+    }
+    if (lArm) {
+      lArm.rotation.z = 0.6 - Math.sin(beat) * 0.45;
+      lArm.rotation.x = -Math.cos(beat) * 0.55;
+    }
+    if (lFore) lFore.rotation.x = Math.abs(Math.sin(beat)) * 0.7;
+    if (rFore) rFore.rotation.x = Math.abs(Math.cos(beat)) * 0.7;
+
+    // Twintails energetic dance bounce
+    if (lHair1) {
+      lHair1.rotation.z = 0.15 + sway * 0.35;
+      lHair1.rotation.x = Math.sin(beat * 2) * 0.25;
+    }
+    if (rHair1) {
+      rHair1.rotation.z = -0.15 + sway * 0.35;
+      rHair1.rotation.x = Math.sin(beat * 2) * 0.25;
+    }
+  }
+  else if (currentAnimName === 'wave') {
+    const wave = Math.sin(t * 7.5) * 0.45;
+    if (rArm) {
+      rArm.rotation.z = -2.1;
+      rArm.rotation.y = 0.35;
+      rArm.rotation.x = -0.20;
+    }
+    if (rFore) {
+      rFore.rotation.y = 0.45;
+      rFore.rotation.z = 0.35 + wave;
+    }
+    if (head) {
+      head.rotation.y = -0.15;
+      head.rotation.z = 0.12;
+    }
+    if (rHair1) rHair1.rotation.z = -0.15 + wave * 0.15;
+  }
+  else if (currentAnimName === 'salute') {
+    if (rArm) {
+      rArm.rotation.z = -1.15;
+      rArm.rotation.y = -0.35;
+      rArm.rotation.x = 0.20;
+    }
+    if (rFore) {
+      rFore.rotation.z = -2.05;
+      rFore.rotation.y = 0.35;
+      rFore.rotation.x = -0.25;
+    }
+    if (chest) chest.rotation.x = -0.06;
+    if (head) {
+      head.rotation.x = 0.05;
+      head.rotation.y = -0.05;
+    }
+  }
+  else if (currentAnimName === 'bow') {
+    const bowCycle = Math.sin(t * 1.8);
+    const angle = Math.max(0, bowCycle) * 0.55;
+    if (spine) spine.rotation.x = angle * 0.45;
+    if (chest) chest.rotation.x = angle * 0.35;
+    if (head) head.rotation.x = angle * 0.15;
+    if (rArm) {
+      rArm.rotation.x = -angle * 0.25;
+      rArm.rotation.z = -0.10;
+    }
+    if (lArm) {
+      lArm.rotation.x = -angle * 0.25;
+      lArm.rotation.z = 0.10;
+    }
+    if (lHair1) lHair1.rotation.x = angle * 0.45;
+    if (rHair1) rHair1.rotation.x = angle * 0.45;
+  }
+  else if (currentAnimName === 'pose') {
+    if (head) {
+      head.rotation.z = -0.15;
+      head.rotation.y = 0.12;
+      head.rotation.x = -0.05;
+    }
+    if (spine) spine.rotation.z = 0.08;
+    if (hips) hips.rotation.z = -0.08;
+    if (rArm) {
+      rArm.rotation.z = -1.5;
+      rArm.rotation.y = 0.5;
+      rArm.rotation.x = 0.3;
+    }
+    if (rFore) rFore.rotation.z = -1.2;
+    if (lArm) {
+      lArm.rotation.z = 0.45;
+      lArm.rotation.y = -0.2;
+    }
+    if (lFore) lFore.rotation.z = 0.8;
+    if (rLeg) {
+      rLeg.rotation.x = -0.15;
+      rLeg.rotation.z = 0.08;
+    }
+    if (rKnee) rKnee.rotation.x = 0.3;
+    if (lHair1) lHair1.rotation.z = 0.25;
+    if (rHair1) rHair1.rotation.z = -0.2;
+  }
+}
+
 function playAnimation(animName) {
   currentAnimName = animName;
-  if (!mixer) return;
+  resetAllBones();
+  animTime = 0;
 
-  const key = animName.toLowerCase();
-  clipsMap.forEach((act) => act.stop());
+  if (mixer) {
+    const key = animName.toLowerCase();
+    clipsMap.forEach((act) => act.stop());
 
-  if (clipsMap.has(key)) {
-    const action = clipsMap.get(key);
-    action.reset().fadeIn(0.2).play();
+    if (clipsMap.has(key)) {
+      const action = clipsMap.get(key);
+      action.reset().fadeIn(0.2).play();
+    }
   }
 }
 
@@ -602,21 +837,26 @@ function setCameraPreset(preset) {
   const c = modelBounds.center;
   const maxD = modelBounds.maxDim;
 
+  const headBone = getBone('Head');
+  const chestBone = getBone('Chest') || getBone('Spine');
+
   if (preset === 'full') {
-    orbitControls.target.copy(c);
-    camera.position.set(c.x, c.y + maxD * 0.05, c.z + maxD * 1.35);
-    orbitControls.minDistance = maxD * 0.2;
+    orbitControls.target.set(c.x, c.y, c.z);
+    camera.position.set(c.x, c.y + maxD * 0.08, c.z + maxD * 1.35);
+    orbitControls.minDistance = maxD * 0.15;
     orbitControls.maxDistance = maxD * 5.0;
   } else if (preset === 'face') {
-    const headTarget = new THREE.Vector3(c.x, c.y + maxD * 0.38, c.z);
+    const headTarget = headBone ? headBone.getWorldPosition(new THREE.Vector3()) : new THREE.Vector3(c.x, c.y + maxD * 0.40, c.z);
     orbitControls.target.copy(headTarget);
-    camera.position.set(c.x, c.y + headTarget.y * 0.05 + maxD * 0.38, c.z + maxD * 0.38);
-    orbitControls.minDistance = maxD * 0.1;
+    camera.position.set(headTarget.x, headTarget.y + maxD * 0.02, headTarget.z + maxD * 0.32);
+    orbitControls.minDistance = maxD * 0.05;
+    orbitControls.maxDistance = maxD * 5.0;
   } else if (preset === 'torso') {
-    const torsoTarget = new THREE.Vector3(c.x, c.y + maxD * 0.16, c.z);
+    const torsoTarget = chestBone ? chestBone.getWorldPosition(new THREE.Vector3()) : new THREE.Vector3(c.x, c.y + maxD * 0.18, c.z);
     orbitControls.target.copy(torsoTarget);
-    camera.position.set(c.x, c.y + maxD * 0.18, c.z + maxD * 0.72);
-    orbitControls.minDistance = maxD * 0.15;
+    camera.position.set(torsoTarget.x, torsoTarget.y, torsoTarget.z + maxD * 0.70);
+    orbitControls.minDistance = maxD * 0.1;
+    orbitControls.maxDistance = maxD * 5.0;
   }
   orbitControls.update();
 }
@@ -635,7 +875,7 @@ function exportCustomGLB() {
     try {
       const exporter = new GLTFExporter();
       const exportScene = new THREE.Scene();
-      const clonedModel = model.clone(true);
+      const clonedModel = SkeletonUtils.clone(model);
 
       // Remove invisible meshes from clone
       const toRemove = [];
@@ -936,8 +1176,12 @@ function animate() {
   requestAnimationFrame(animate);
 
   const delta = Math.min(animClock.getDelta(), 0.1);
-  if (isPlaying && mixer) {
-    mixer.update(delta * animSpeed);
+  if (isPlaying) {
+    if (mixer && clipsMap.size > 0 && clipsMap.has(currentAnimName.toLowerCase())) {
+      mixer.update(delta * animSpeed);
+    } else {
+      updateProceduralAnimations(delta);
+    }
   }
 
   orbitControls.update();
