@@ -79,12 +79,13 @@ function init() {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-  // 4. OrbitControls
+  // 4. OrbitControls (Full 360-degree spherical rotation)
   orbitControls = new OrbitControls(camera, renderer.domElement);
   orbitControls.enableDamping = true;
   orbitControls.dampingFactor = 0.05;
   orbitControls.target.set(0, 10, 0);
-  orbitControls.maxPolarAngle = Math.PI / 2 + 0.08;
+  orbitControls.minPolarAngle = 0.01;
+  orbitControls.maxPolarAngle = Math.PI - 0.01;
   orbitControls.minDistance = 0.5;
   orbitControls.maxDistance = 200;
 
@@ -124,6 +125,10 @@ function init() {
   fillLight = new THREE.DirectionalLight(0x818cf8, 0.45);
   fillLight.position.set(-15, 15, -15);
   scene.add(fillLight);
+
+  const bottomLight = new THREE.DirectionalLight(0x93c5fd, 0.35);
+  bottomLight.position.set(0, -20, 10);
+  scene.add(bottomLight);
 
   // 7. Ground & Grid
   const shadowGeo = new THREE.PlaneGeometry(100, 100);
