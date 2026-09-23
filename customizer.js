@@ -17,18 +17,24 @@ const clipsMap = new Map();  // name lowercase -> Action
 
 // Customizer Configuration
 const avatarConfig = {
+  avatarModel: 'miku', // 'miku' | 'female' | 'male'
   gender: 'female',
-  hair: 'Hair_Twintails',
-  outfit: 'Outfit_Sailor',
-  shoes: 'Shoes_Loafers',
-  accessories: new Set(['Accessory_CatEars']),
+  hair: 'Hair_Miku_Twintails',
+  outfit: 'Outfit_Miku_Full',
+  shoes: 'Shoes_Miku_Boots',
+  accessories: new Set([
+    'Outfit_Miku_Sleeves',
+    'Accessory_Miku_Headset',
+    'Accessory_Miku_Tie',
+    'Accessory_CatEars'
+  ]),
   eyeStyle: 'moe',
   expression: 'smile',
   colors: {
     skin: '#fff0ea',
-    hair: '#33c7df',
+    hair: '#ffffff', // default white (preserves original texture color)
     iris: '#2288ff',
-    outfit_primary: '#1e293b'
+    outfit_primary: '#ffffff' // default white (preserves original texture color)
   },
   proportions: {
     height: 1.0,
@@ -40,6 +46,9 @@ const avatarConfig = {
 
 // Canvas Face / Eye Texture
 let eyeCanvas, eyeCtx, eyeTexture;
+let currentLoadedModelType = null;
+let modelBounds = { center: new THREE.Vector3(0, 0, 0), size: new THREE.Vector3(1, 2, 1), maxDim: 2 };
+let dirLight, ambLight, fillLight, rimLight, bottomLight, shadowPlane, grid;
 
 // DOM Elements
 const canvas = document.getElementById('canvas3d');
@@ -86,7 +95,7 @@ function init() {
   orbitControls.maxDistance = 5.0;
 
   // 5. Lighting (Anime Cel Studio Lighting)
-  const ambLight = new THREE.AmbientLight(0xfff0f5, 0.85);
+  ambLight = new THREE.AmbientLight(0xfff0f5, 0.85);
   scene.add(ambLight);
 
   const keyLight = new THREE.DirectionalLight(0xffffff, 1.25);
@@ -96,28 +105,28 @@ function init() {
   keyLight.shadow.bias = -0.0005;
   scene.add(keyLight);
 
-  const fillLight = new THREE.DirectionalLight(0x818cf8, 0.55);
+  fillLight = new THREE.DirectionalLight(0x818cf8, 0.55);
   fillLight.position.set(-3, 3, -2);
   scene.add(fillLight);
 
-  const rimLight = new THREE.DirectionalLight(0xec4899, 0.45);
+  rimLight = new THREE.DirectionalLight(0xec4899, 0.45);
   rimLight.position.set(0, 4, -4);
   scene.add(rimLight);
 
-  const bottomLight = new THREE.DirectionalLight(0x38bdf8, 0.35);
+  bottomLight = new THREE.DirectionalLight(0x38bdf8, 0.35);
   bottomLight.position.set(0, -4, 2);
   scene.add(bottomLight);
 
   // Ground Grid & Shadow Plane
-  const shadowGeo = new THREE.PlaneGeometry(10, 10);
+  const shadowGeo = new THREE.PlaneGeometry(100, 100);
   const shadowMat = new THREE.ShadowMaterial({ opacity: 0.3 });
-  const shadowPlane = new THREE.Mesh(shadowGeo, shadowMat);
+  shadowPlane = new THREE.Mesh(shadowGeo, shadowMat);
   shadowPlane.rotation.x = -Math.PI / 2;
   shadowPlane.position.y = -1.0;
   shadowPlane.receiveShadow = true;
   scene.add(shadowPlane);
 
-  const grid = new THREE.GridHelper(8, 24, 0x4f46e5, 0x1e293b);
+  grid = new THREE.GridHelper(40, 40, 0x4f46e5, 0x1e293b);
   grid.position.y = -0.999;
   scene.add(grid);
 
@@ -338,28 +347,47 @@ function drawBlush(ctx, cx, cy) {
 // -----------------------------------------------------------------------------
 // Modular Model Loader
 // -----------------------------------------------------------------------------
-function loadModularModel() {
+// -----------------------------------------------------------------------------
+// Modular Model Loader
+// -----------------------------------------------------------------------------
+function loadModularModel(targetModelType = avatarConfig.avatarModel) {
   const loader = new GLTFLoader();
-  const url = 'anime_avatar_modular.glb?v=1.5';
+  const isMiku = (targetModelType === 'miku');
+  const url = isMiku ? 'miku_modular.glb?v=2.0' : 'anime_avatar_modular.glb?v=2.0';
 
   exportModal.style.display = 'flex';
-  modalTitle.textContent = '載入日系卡漫紙娃娃中...';
-  modalDesc.textContent = '初始化 16 款動漫模組與 3D 骨架中，請稍候';
+  modalTitle.textContent = isMiku ? '載入初音未來模組化紙娃娃中...' : '載入原創紙娃娃模型中...';
+  modalDesc.textContent = isMiku 
+    ? '初始化 SEGA 高精手繪部件、動態物理骨架與動作庫...' 
+    : '初始化 16 款動漫幾何模組與 3D 骨架中...';
 
   loader.load(
     url,
     (gltf) => {
+      // 1. Clean up old model
+      if (model) {
+        scene.remove(model);
+        model = null;
+      }
+      if (mixer) {
+        mixer.stopAllAction();
+        mixer = null;
+      }
+      clipsMap.clear();
+      allMeshes.clear();
+
+      // 2. Add new model
       model = gltf.scene;
       scene.add(model);
+      currentLoadedModelType = targetModelType;
 
-      allMeshes.clear();
       model.traverse((child) => {
         if (child.isMesh) {
           child.castShadow = true;
           child.receiveShadow = true;
           allMeshes.set(child.name, child);
 
-          // Apply special transparent eye decal material
+          // Transparent eye decal material for procedural avatar
           if (child.name === 'Face_Eyes') {
             child.material = new THREE.MeshBasicMaterial({
               map: eyeTexture,
@@ -375,9 +403,20 @@ function loadModularModel() {
         }
       });
 
-      console.log(`Loaded Anime Avatar Studio Model with ${allMeshes.size} modular parts.`);
+      console.log(`Loaded ${targetModelType} model with ${allMeshes.size} modular parts.`);
 
-      // Setup Animation Mixer
+      // 3. Compute dynamic bounding box
+      const box = new THREE.Box3().setFromObject(model);
+      modelBounds.center = box.getCenter(new THREE.Vector3());
+      modelBounds.size = box.getSize(new THREE.Vector3());
+      modelBounds.maxDim = Math.max(modelBounds.size.x, modelBounds.size.y, modelBounds.size.z);
+
+      // Adjust shadow plane, grid, and bottom light based on model scale
+      if (shadowPlane) shadowPlane.position.y = box.min.y;
+      if (grid) grid.position.y = box.min.y + 0.001;
+      if (bottomLight) bottomLight.position.set(0, box.min.y - 2, 2);
+
+      // 4. Setup Animation Mixer
       if (gltf.animations && gltf.animations.length > 0) {
         mixer = new THREE.AnimationMixer(model);
         gltf.animations.forEach((clip) => {
@@ -387,19 +426,22 @@ function loadModularModel() {
         console.log('Embedded avatar animations:', Array.from(clipsMap.keys()));
       }
 
-      // Apply initial component selection and colors
+      // 5. Apply component configuration
       applyAvatarConfiguration();
 
-      // Play Idle Animation
+      // 6. Camera Auto-Frame
+      setCameraPreset('full');
+
+      // 7. Play default action
       playAnimation(currentAnimName);
 
-      // Hide loading modal
+      // 8. Hide modal
       exportModal.style.display = 'none';
       onWindowResize();
     },
     undefined,
     (err) => {
-      console.error('Error loading anime avatar modular model:', err);
+      console.error('Error loading model:', err);
       modalTitle.textContent = '模型載入失敗';
       modalDesc.textContent = err.message || '請確認網路連線或重新整理頁面。';
     }
@@ -414,38 +456,66 @@ function applyAvatarConfiguration() {
 
   const cfg = avatarConfig;
 
-  // 1. Gender / Base Body
-  const isFemale = cfg.gender === 'female';
-  setMeshVisibility('Body_Female', isFemale);
-  setMeshVisibility('Body_Male', !isFemale);
+  if (currentLoadedModelType === 'miku') {
+    // === MIKU MODULAR PARTS ===
+    // 1. Hair
+    const hasHair = (cfg.hair === 'Hair_Miku_Twintails');
+    setMeshVisibility('Hair_Miku_Twintails', hasHair);
 
-  // 2. Hairstyles
-  const hairStyles = ['Hair_Twintails', 'Hair_Bob', 'Hair_Hime', 'Hair_Spiky', 'Hair_Parted'];
-  hairStyles.forEach(h => setMeshVisibility(h, h === cfg.hair));
+    // 2. Head & Facial Features
+    setMeshVisibility('Head_Miku', true);
+    setMeshVisibility('Face_Eyes_Miku', true);
+    setMeshVisibility('Face_Mouth_Miku', true);
 
-  // 3. Outfits
-  const outfits = ['Outfit_Sailor', 'Outfit_Blazer', 'Outfit_Hoodie', 'Outfit_Casual'];
-  outfits.forEach(o => setMeshVisibility(o, o === cfg.outfit));
+    // 3. Outfits
+    if (cfg.outfit === 'Outfit_Miku_Full') {
+      setMeshVisibility('Outfit_Miku_Top', true);
+      setMeshVisibility('Outfit_Miku_Skirt', true);
+    } else if (cfg.outfit === 'Outfit_Miku_Top') {
+      setMeshVisibility('Outfit_Miku_Top', true);
+      setMeshVisibility('Outfit_Miku_Skirt', false);
+    } else if (cfg.outfit === 'Outfit_Miku_Skirt') {
+      setMeshVisibility('Outfit_Miku_Top', false);
+      setMeshVisibility('Outfit_Miku_Skirt', true);
+    } else {
+      setMeshVisibility('Outfit_Miku_Top', false);
+      setMeshVisibility('Outfit_Miku_Skirt', false);
+    }
 
-  // 4. Shoes
-  const shoes = ['Shoes_Loafers', 'Shoes_Sneakers'];
-  shoes.forEach(s => setMeshVisibility(s, s === cfg.shoes));
+    // 4. Sleeves
+    setMeshVisibility('Outfit_Miku_Sleeves', cfg.accessories.has('Outfit_Miku_Sleeves'));
 
-  // 5. Accessories
-  setMeshVisibility('Accessory_Glasses', cfg.accessories.has('Accessory_Glasses'));
-  setMeshVisibility('Accessory_CatEars', cfg.accessories.has('Accessory_CatEars'));
+    // 5. Boots
+    setMeshVisibility('Shoes_Miku_Boots', cfg.shoes === 'Shoes_Miku_Boots');
 
-  // 6. Eyes always visible
-  setMeshVisibility('Face_Eyes', true);
+    // 6. Accessories
+    setMeshVisibility('Accessory_Miku_Headset', cfg.accessories.has('Accessory_Miku_Headset'));
+    setMeshVisibility('Accessory_Miku_Tie', cfg.accessories.has('Accessory_Miku_Tie'));
+  } else {
+    // === PROCEDURAL AVATAR PARTS ===
+    const isFemale = cfg.gender === 'female';
+    setMeshVisibility('Body_Female', isFemale);
+    setMeshVisibility('Body_Male', !isFemale);
 
-  // 7. Apply Colors to Materials
+    const hairStyles = ['Hair_Twintails', 'Hair_Bob', 'Hair_Hime', 'Hair_Spiky', 'Hair_Parted'];
+    hairStyles.forEach(h => setMeshVisibility(h, h === cfg.hair));
+
+    const outfits = ['Outfit_Sailor', 'Outfit_Blazer', 'Outfit_Hoodie', 'Outfit_Casual'];
+    outfits.forEach(o => setMeshVisibility(o, o === cfg.outfit));
+
+    const shoes = ['Shoes_Loafers', 'Shoes_Sneakers'];
+    shoes.forEach(s => setMeshVisibility(s, s === cfg.shoes));
+
+    setMeshVisibility('Accessory_Glasses', cfg.accessories.has('Accessory_Glasses'));
+    setMeshVisibility('Accessory_CatEars', cfg.accessories.has('Accessory_CatEars'));
+    setMeshVisibility('Face_Eyes', true);
+
+    updateFaceTexture();
+  }
+
+  // Apply Colors & Proportions
   applyColors();
-
-  // 8. Apply Body Proportions
   applyProportions();
-
-  // 9. Update Eye Texture
-  updateFaceTexture();
 }
 
 function setMeshVisibility(name, visible) {
@@ -460,15 +530,23 @@ function applyColors() {
 
   allMeshes.forEach((mesh) => {
     if (!mesh.material || mesh.name === 'Face_Eyes') return;
-    const matName = mesh.material.name || '';
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
 
-    if (matName.includes('Skin') || mesh.name.includes('Body')) {
-      mesh.material.color = new THREE.Color(cfg.colors.skin);
-    } else if (matName.includes('Hair') || mesh.name.includes('Hair')) {
-      mesh.material.color = new THREE.Color(cfg.colors.hair);
-    } else if (matName.includes('Outfit') || mesh.name.includes('Outfit')) {
-      mesh.material.color = new THREE.Color(cfg.colors.outfit_primary);
-    }
+    mats.forEach((mat) => {
+      const matName = mat.name || '';
+      const mName = mesh.name;
+
+      if (mName.includes('Hair')) {
+        mat.color = new THREE.Color(cfg.colors.hair);
+        mat.needsUpdate = true;
+      } else if (mName.includes('Outfit') || mName.includes('Dress') || matName.includes('Outfit')) {
+        mat.color = new THREE.Color(cfg.colors.outfit_primary);
+        mat.needsUpdate = true;
+      } else if (mName.includes('Body') || matName.includes('Skin')) {
+        mat.color = new THREE.Color(cfg.colors.skin);
+        mat.needsUpdate = true;
+      }
+    });
   });
 }
 
@@ -476,10 +554,10 @@ function applyProportions() {
   if (!model) return;
   const p = avatarConfig.proportions;
 
-  // Height scaling
+  // Height and shoulder scaling
   model.scale.set(p.shoulder, p.height, 1.0);
 
-  // Head bone scale
+  // Head bone scaling
   const headBone = model.getObjectByName('Head');
   if (headBone) {
     headBone.scale.set(p.head, p.head, p.head);
@@ -517,20 +595,28 @@ function togglePlayPause(play) {
 }
 
 // -----------------------------------------------------------------------------
-// Camera Presets
+// Camera Presets (Auto-scaled with model)
 // -----------------------------------------------------------------------------
 function setCameraPreset(preset) {
-  if (!orbitControls) return;
+  if (!orbitControls || !model) return;
+  const c = modelBounds.center;
+  const maxD = modelBounds.maxDim;
 
   if (preset === 'full') {
-    camera.position.set(0, 0.1, 2.7);
-    orbitControls.target.set(0, 0.05, 0);
+    orbitControls.target.copy(c);
+    camera.position.set(c.x, c.y + maxD * 0.05, c.z + maxD * 1.35);
+    orbitControls.minDistance = maxD * 0.2;
+    orbitControls.maxDistance = maxD * 5.0;
   } else if (preset === 'face') {
-    camera.position.set(0, 0.82, 0.70);
-    orbitControls.target.set(0, 0.80, 0);
+    const headTarget = new THREE.Vector3(c.x, c.y + maxD * 0.38, c.z);
+    orbitControls.target.copy(headTarget);
+    camera.position.set(c.x, c.y + headTarget.y * 0.05 + maxD * 0.38, c.z + maxD * 0.38);
+    orbitControls.minDistance = maxD * 0.1;
   } else if (preset === 'torso') {
-    camera.position.set(0, 0.45, 1.45);
-    orbitControls.target.set(0, 0.35, 0);
+    const torsoTarget = new THREE.Vector3(c.x, c.y + maxD * 0.16, c.z);
+    orbitControls.target.copy(torsoTarget);
+    camera.position.set(c.x, c.y + maxD * 0.18, c.z + maxD * 0.72);
+    orbitControls.minDistance = maxD * 0.15;
   }
   orbitControls.update();
 }
@@ -548,8 +634,6 @@ function exportCustomGLB() {
   setTimeout(() => {
     try {
       const exporter = new GLTFExporter();
-
-      // Filter: only export visible meshes and the skeleton
       const exportScene = new THREE.Scene();
       const clonedModel = model.clone(true);
 
@@ -571,7 +655,8 @@ function exportCustomGLB() {
           const url = URL.createObjectURL(blob);
           const link = document.createElement('a');
           const timeStr = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-          link.download = `anime_avatar_${avatarConfig.gender}_${timeStr}.glb`;
+          const nameTag = (currentLoadedModelType === 'miku') ? 'miku_custom' : `avatar_${avatarConfig.gender}`;
+          link.download = `${nameTag}_${timeStr}.glb`;
           link.href = url;
           link.click();
           URL.revokeObjectURL(url);
@@ -600,6 +685,37 @@ function exportCustomGLB() {
 // -----------------------------------------------------------------------------
 // UI Event Handlers
 // -----------------------------------------------------------------------------
+function syncUiToConfig() {
+  const cfg = avatarConfig;
+
+  // Single select cards
+  document.querySelectorAll('.opt-card:not(.toggle-card)').forEach((card) => {
+    const type = card.dataset.type;
+    const val = card.dataset.val;
+
+    if (type === 'avatar_model') card.classList.toggle('active', val === cfg.avatarModel);
+    else if (type === 'hair') card.classList.toggle('active', val === cfg.hair);
+    else if (type === 'outfit') card.classList.toggle('active', val === cfg.outfit);
+    else if (type === 'shoes') card.classList.toggle('active', val === cfg.shoes);
+    else if (type === 'eye_style') card.classList.toggle('active', val === cfg.eyeStyle);
+  });
+
+  // Toggle cards
+  document.querySelectorAll('.toggle-card').forEach((card) => {
+    const toggle = card.dataset.toggle;
+    card.classList.toggle('active', cfg.accessories.has(toggle));
+  });
+
+  // Color dots
+  document.querySelectorAll('.color-palette').forEach((palette) => {
+    const target = palette.dataset.target;
+    const targetColor = cfg.colors[target];
+    palette.querySelectorAll('.color-dot').forEach((dot) => {
+      dot.classList.toggle('active', dot.dataset.color.toLowerCase() === (targetColor || '').toLowerCase());
+    });
+  });
+}
+
 function setupEventListeners() {
   // Category Tabs
   document.querySelectorAll('.cat-tab').forEach(tab => {
@@ -613,7 +729,7 @@ function setupEventListeners() {
     });
   });
 
-  // Option Cards (Single Selection: gender, hair, outfit, shoes, eye_style)
+  // Option Cards (Single Selection: avatar_model, hair, outfit, shoes, eye_style)
   document.querySelectorAll('.opt-card:not(.toggle-card)').forEach(card => {
     card.addEventListener('click', () => {
       const type = card.dataset.type;
@@ -623,17 +739,44 @@ function setupEventListeners() {
       document.querySelectorAll(`.opt-card[data-type="${type}"]`).forEach(c => c.classList.remove('active'));
       card.classList.add('active');
 
-      if (type === 'gender') avatarConfig.gender = val;
-      else if (type === 'hair') avatarConfig.hair = val;
-      else if (type === 'outfit') avatarConfig.outfit = val;
-      else if (type === 'shoes') avatarConfig.shoes = val;
-      else if (type === 'eye_style') avatarConfig.eyeStyle = val;
+      if (type === 'avatar_model') {
+        avatarConfig.avatarModel = val;
+        if (val === 'miku') {
+          avatarConfig.gender = 'female';
+          avatarConfig.hair = 'Hair_Miku_Twintails';
+          avatarConfig.outfit = 'Outfit_Miku_Full';
+          avatarConfig.shoes = 'Shoes_Miku_Boots';
+          avatarConfig.accessories.add('Outfit_Miku_Sleeves');
+          avatarConfig.accessories.add('Accessory_Miku_Headset');
+          avatarConfig.accessories.add('Accessory_Miku_Tie');
+          avatarConfig.colors.hair = '#ffffff';
+          avatarConfig.colors.outfit_primary = '#ffffff';
+        } else {
+          avatarConfig.gender = val;
+          avatarConfig.hair = 'Hair_Twintails';
+          avatarConfig.outfit = 'Outfit_Sailor';
+          avatarConfig.shoes = 'Shoes_Loafers';
+          avatarConfig.colors.hair = '#33c7df';
+          avatarConfig.colors.outfit_primary = '#1e293b';
+        }
+        syncUiToConfig();
+        loadModularModel(val === 'miku' ? 'miku' : 'procedural');
+        return;
+      } else if (type === 'hair') {
+        avatarConfig.hair = val;
+      } else if (type === 'outfit') {
+        avatarConfig.outfit = val;
+      } else if (type === 'shoes') {
+        avatarConfig.shoes = val;
+      } else if (type === 'eye_style') {
+        avatarConfig.eyeStyle = val;
+      }
 
       applyAvatarConfiguration();
     });
   });
 
-  // Toggle Cards (Accessories: CatEars, Glasses)
+  // Toggle Cards (Accessories: CatEars, Glasses, Sleeves, Headset, Tie)
   document.querySelectorAll('.toggle-card').forEach(card => {
     card.addEventListener('click', () => {
       const toggle = card.dataset.toggle;

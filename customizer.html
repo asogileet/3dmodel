@@ -114,17 +114,22 @@
         <div class="panel-content-scroll">
           <!-- 1. Gender & Base Body -->
           <section class="panel-section active" id="sec-gender">
-            <h2>性別與素體</h2>
-            <div class="card-grid col-2">
-              <div class="opt-card active" data-type="gender" data-val="female">
-                <div class="card-icon">👧</div>
-                <div class="card-title">日系美少女</div>
-                <div class="card-desc">纖細動漫身形、萌系頭身比</div>
+            <h2>角色模組與素體選擇</h2>
+            <div class="card-grid col-3">
+              <div class="opt-card active" data-type="avatar_model" data-val="miku">
+                <div class="card-icon">👑</div>
+                <div class="card-title">初音未來 (高精)</div>
+                <div class="card-desc">SEGA 官方高精拆解模組、手繪動漫貼圖</div>
               </div>
-              <div class="opt-card" data-type="gender" data-val="male">
+              <div class="opt-card" data-type="avatar_model" data-val="female">
+                <div class="card-icon">👧</div>
+                <div class="card-title">原創美少女</div>
+                <div class="card-desc">幾何素體、萌系動漫頭身比</div>
+              </div>
+              <div class="opt-card" data-type="avatar_model" data-val="male">
                 <div class="card-icon">👦</div>
-                <div class="card-title">日系美少年</div>
-                <div class="card-desc">挺拔修長、陽光帥氣體格</div>
+                <div class="card-title">原創美少年</div>
+                <div class="card-desc">幾何素體、挺拔帥氣體格</div>
               </div>
             </div>
 
@@ -144,10 +149,15 @@
           <section class="panel-section" id="sec-hair">
             <h2>日系髮型選擇</h2>
             <div class="card-grid col-2">
-              <div class="opt-card active" data-type="hair" data-val="Hair_Twintails">
+              <div class="opt-card active" data-type="hair" data-val="Hair_Miku_Twintails">
+                <div class="card-icon">🌟</div>
+                <div class="card-title">初音高精雙馬尾</div>
+                <div class="card-desc">經典手繪材質、飄逸動態物理骨骼</div>
+              </div>
+              <div class="opt-card" data-type="hair" data-val="Hair_Twintails">
                 <div class="card-icon">👧</div>
-                <div class="card-title">經典雙馬尾</div>
-                <div class="card-desc">齊瀏海 + 動態高馬尾</div>
+                <div class="card-title">幾何雙馬尾</div>
+                <div class="card-desc">齊瀏海 + 幾何立體高馬尾</div>
               </div>
               <div class="opt-card" data-type="hair" data-val="Hair_Bob">
                 <div class="card-icon">💇‍♀️</div>
@@ -172,14 +182,15 @@
               <div class="opt-card" data-type="hair" data-val="none">
                 <div class="card-icon">🚫</div>
                 <div class="card-title">無髮型 (素頭)</div>
-                <div class="card-desc">不穿戴假髮</div>
+                <div class="card-desc">卸除假髮</div>
               </div>
             </div>
 
             <div class="control-group mt-3">
-              <label>經典動漫髮色 (Hair Color)</label>
+              <label>經典動漫髮色 (Hair Color / Tint)</label>
               <div class="color-palette" data-target="hair">
-                <button class="color-dot active" style="background:#33c7df;" data-color="#33c7df" title="初音湖水藍"></button>
+                <button class="color-dot active" style="background:#ffffff; border:1px solid #38bdf8;" data-color="#ffffff" title="原版初音青藍 (Original)"></button>
+                <button class="color-dot" style="background:#33c7df;" data-color="#33c7df" title="深邃湖水藍"></button>
                 <button class="color-dot" style="background:#ff85a2;" data-color="#ff85a2" title="櫻花粉"></button>
                 <button class="color-dot" style="background:#ffd255;" data-color="#ffd255" title="香檳金"></button>
                 <button class="color-dot" style="background:#26262a;" data-color="#26262a" title="烏木黑"></button>
@@ -243,7 +254,22 @@
           <section class="panel-section" id="sec-outfit">
             <h2>日系服飾庫</h2>
             <div class="card-grid col-2">
-              <div class="opt-card active" data-type="outfit" data-val="Outfit_Sailor">
+              <div class="opt-card active" data-type="outfit" data-val="Outfit_Miku_Full">
+                <div class="card-icon">👑</div>
+                <div class="card-title">初音公式服 (全套)</div>
+                <div class="card-desc">無袖銀灰襯衫 + 黑綠百褶裙</div>
+              </div>
+              <div class="opt-card" data-type="outfit" data-val="Outfit_Miku_Top">
+                <div class="card-icon">🎽</div>
+                <div class="card-title">初音公式襯衫</div>
+                <div class="card-desc">單穿無袖上衣襯衫</div>
+              </div>
+              <div class="opt-card" data-type="outfit" data-val="Outfit_Miku_Skirt">
+                <div class="card-icon">👗</div>
+                <div class="card-title">初音百褶短裙</div>
+                <div class="card-desc">經典黑綠腰帶百褶裙</div>
+              </div>
+              <div class="opt-card" data-type="outfit" data-val="Outfit_Sailor">
                 <div class="card-icon">🎀</div>
                 <div class="card-title">高校水手百褶裙</div>
                 <div class="card-desc">海軍大翻領 + 蝴蝶結領巾</div>
@@ -263,13 +289,18 @@
                 <div class="card-title">簡約日常休閒裝</div>
                 <div class="card-desc">休閒短T + 修身丹寧褲</div>
               </div>
+              <div class="opt-card" data-type="outfit" data-val="none">
+                <div class="card-icon">🚫</div>
+                <div class="card-title">卸除外衣</div>
+                <div class="card-desc">素體形態</div>
+              </div>
             </div>
 
             <div class="control-group mt-3">
-              <label>服裝主色系 (Primary Color)</label>
+              <label>服裝主色調 (Primary Color / Tint)</label>
               <div class="color-palette" data-target="outfit_primary">
-                <button class="color-dot active" style="background:#1e293b;" data-color="#1e293b" title="藏青海藍"></button>
-                <button class="color-dot" style="background:#ffffff; border:1px solid #999;" data-color="#f8fafc" title="純淨白"></button>
+                <button class="color-dot active" style="background:#ffffff; border:1px solid #999;" data-color="#ffffff" title="原版公式銀灰 (Original)"></button>
+                <button class="color-dot" style="background:#1e293b;" data-color="#1e293b" title="藏青海藍"></button>
                 <button class="color-dot" style="background:#be123c;" data-color="#be123c" title="深酒紅"></button>
                 <button class="color-dot" style="background:#0f766e;" data-color="#0f766e" title="深墨綠"></button>
                 <button class="color-dot" style="background:#3b82f6;" data-color="#3b82f6" title="天空藍"></button>
@@ -281,9 +312,14 @@
           <!-- 5. Shoes & Accessories -->
           <section class="panel-section" id="sec-shoes">
             <h2>鞋款與飾品配件</h2>
-            <h3>鞋襪選擇</h3>
+            <h3>鞋襪款式</h3>
             <div class="card-grid col-2">
-              <div class="opt-card active" data-type="shoes" data-val="Shoes_Loafers">
+              <div class="opt-card active" data-type="shoes" data-val="Shoes_Miku_Boots">
+                <div class="card-icon">👢</div>
+                <div class="card-title">初音過膝長靴</div>
+                <div class="card-desc">黑色高筒大腿靴 + 綠黑邊紋</div>
+              </div>
+              <div class="opt-card" data-type="shoes" data-val="Shoes_Loafers">
                 <div class="card-icon">👞</div>
                 <div class="card-title">學生樂福鞋</div>
                 <div class="card-desc">黑色皮鞋 + 高筒及膝襪</div>
@@ -293,10 +329,30 @@
                 <div class="card-title">潮流高筒球鞋</div>
                 <div class="card-desc">運動休閒厚底板鞋</div>
               </div>
+              <div class="opt-card" data-type="shoes" data-val="none">
+                <div class="card-icon">🚫</div>
+                <div class="card-title">赤足 (無鞋襪)</div>
+                <div class="card-desc">卸除鞋襪</div>
+              </div>
             </div>
 
-            <h3 class="mt-3">頭部飾品開關</h3>
+            <h3 class="mt-3">專屬配件 & 初音袖套開關</h3>
             <div class="card-grid col-2">
+              <div class="opt-card toggle-card active" data-toggle="Outfit_Miku_Sleeves">
+                <div class="card-icon">🧤</div>
+                <div class="card-title">初音科技袖套</div>
+                <div class="card-desc">手臂數位螢幕 + 纖細手指</div>
+              </div>
+              <div class="opt-card toggle-card active" data-toggle="Accessory_Miku_Headset">
+                <div class="card-icon">🎧</div>
+                <div class="card-title">初音科技耳麥</div>
+                <div class="card-desc">頭戴式通訊耳機麥克風</div>
+              </div>
+              <div class="opt-card toggle-card active" data-toggle="Accessory_Miku_Tie">
+                <div class="card-icon">👔</div>
+                <div class="card-title">初音天藍領帶</div>
+                <div class="card-desc">金屬領夾 + 天藍長領帶</div>
+              </div>
               <div class="opt-card toggle-card active" data-toggle="Accessory_CatEars">
                 <div class="card-icon">🐱</div>
                 <div class="card-title">萌系貓耳髮箍</div>
@@ -353,6 +409,6 @@
     </div>
   </div>
 
-  <script type="module" src="customizer.js?v=1.6"></script>
+  <script type="module" src="customizer.js?v=2.0"></script>
 </body>
 </html>
