@@ -355,13 +355,24 @@ function drawBlush(ctx, cx, cy) {
 function loadModularModel(targetModelType = avatarConfig.avatarModel) {
   const loader = new GLTFLoader();
   const isMiku = (targetModelType === 'miku');
-  const url = isMiku ? 'miku_modular.glb?v=2.0' : 'anime_avatar_modular.glb?v=2.0';
+  const isMint = (targetModelType === 'mint');
+  let url = 'anime_avatar_modular.glb?v=2.0';
+  let title = '載入原創紙娃娃模型中...';
+  let desc = '初始化 16 款動漫幾何模組與 3D 骨架中...';
+
+  if (isMiku) {
+    url = 'miku_modular.glb?v=3.0';
+    title = '載入初音未來模組化紙娃娃中...';
+    desc = '初始化 SEGA 高精手繪部件、多款日系假髮與動作庫...';
+  } else if (isMint) {
+    url = 'mint_modular.glb?v=1.0';
+    title = '載入薄荷 Mint (Neverness To Everness) 中...';
+    desc = '初始化 2D Flat 動漫渲、Unlit Emission 材質與 24 秒官方靈動展示舞步...';
+  }
 
   exportModal.style.display = 'flex';
-  modalTitle.textContent = isMiku ? '載入初音未來模組化紙娃娃中...' : '載入原創紙娃娃模型中...';
-  modalDesc.textContent = isMiku 
-    ? '初始化 SEGA 高精手繪部件、動態物理骨架與動作庫...' 
-    : '初始化 16 款動漫幾何模組與 3D 骨架中...';
+  modalTitle.textContent = title;
+  modalDesc.textContent = desc;
 
   loader.load(
     url,
@@ -387,9 +398,25 @@ function loadModularModel(targetModelType = avatarConfig.avatarModel) {
 
       model.traverse((child) => {
         if (child.isMesh) {
-          child.castShadow = true;
-          child.receiveShadow = true;
           allMeshes.set(child.name, child);
+
+          if (isMint) {
+            // Apply 2D Anime Flat Shading instructions:
+            // "To avoid realistic 3D shading or weird shadows, set Shadow Mode to None for all materials"
+            child.castShadow = false;
+            child.receiveShadow = false;
+            if (child.material) {
+              const mats = Array.isArray(child.material) ? child.material : [child.material];
+              mats.forEach(mat => {
+                mat.transparent = true;
+                mat.alphaTest = 0.05;
+                mat.depthWrite = true;
+              });
+            }
+          } else {
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
 
           // Transparent eye decal material for procedural avatar
           if (child.name === 'Face_Eyes') {
@@ -526,6 +553,32 @@ function applyAvatarConfiguration() {
     // 6. Accessories
     setMeshVisibility('Accessory_Miku_Headset', cfg.accessories.has('Accessory_Miku_Headset'));
     setMeshVisibility('Accessory_Miku_Tie', cfg.accessories.has('Accessory_Miku_Tie'));
+  } else if (currentLoadedModelType === 'mint') {
+    // === MINT MODULAR PARTS ===
+    // 1. Hair
+    const hasBack = (cfg.hair === 'Hair_Mint_Full');
+    const hasFront = (cfg.hair === 'Hair_Mint_Full' || cfg.hair === 'Hair_Mint_Front');
+    setMeshVisibility('Hair_Mint_Back', hasBack);
+    setMeshVisibility('Hair_Mint_Front', hasFront);
+
+    // 2. Head & Facial Features
+    setMeshVisibility('Head_Mint_Face', true);
+    setMeshVisibility('Face_Mint_Eyes', true);
+    setMeshVisibility('Face_Mint_Eyelashes', true);
+    setMeshVisibility('Face_Mint_Highlight', true);
+    setMeshVisibility('Face_Mint_Mask', true);
+
+    // 3. Outfits
+    const hasSwimsuit = (cfg.outfit === 'Outfit_Mint_Full' || cfg.outfit === 'Outfit_Mint_Bikini');
+    const hasSkirt = (cfg.outfit === 'Outfit_Mint_Full' || cfg.outfit === 'Outfit_Mint_SkirtOnly');
+    setMeshVisibility('Outfit_Mint_Swimsuit', hasSwimsuit);
+    setMeshVisibility('Outfit_Mint_Skirt', hasSkirt);
+
+    // 4. Accessories
+    setMeshVisibility('Accessory_Mint_Hat', cfg.accessories.has('Accessory_Mint_Hat'));
+    setMeshVisibility('Accessory_Mint_ChestBow', cfg.accessories.has('Accessory_Mint_ChestBow'));
+    setMeshVisibility('Accessory_Mint_Ribbon', cfg.accessories.has('Accessory_Mint_Ribbon'));
+    setMeshVisibility('Outfit_Mint_Accessories', cfg.accessories.has('Outfit_Mint_Accessories'));
   } else {
     // === PROCEDURAL AVATAR PARTS ===
     const isFemale = cfg.gender === 'female';
@@ -574,10 +627,10 @@ function applyColors() {
       if (mName.includes('Hair')) {
         mat.color = new THREE.Color(cfg.colors.hair);
         mat.needsUpdate = true;
-      } else if (mName.includes('Outfit') || mName.includes('Dress') || matName.includes('Outfit')) {
+      } else if (mName.includes('Outfit') || mName.includes('Dress') || matName.includes('Outfit') || mName.includes('Accessory_Mint')) {
         mat.color = new THREE.Color(cfg.colors.outfit_primary);
         mat.needsUpdate = true;
-      } else if (mName.includes('Body') || (mName.includes('Skin') && currentLoadedModelType !== 'miku')) {
+      } else if (mName.includes('Body') || (mName.includes('Skin') && currentLoadedModelType !== 'miku' && currentLoadedModelType !== 'mint')) {
         mat.color = new THREE.Color(cfg.colors.skin);
         mat.needsUpdate = true;
       }
@@ -825,6 +878,9 @@ function playAnimation(animName) {
     if (clipsMap.has(key)) {
       const action = clipsMap.get(key);
       action.reset().fadeIn(0.2).play();
+    } else if (currentLoadedModelType === 'mint' && clipsMap.has('idle')) {
+      const action = clipsMap.get('idle');
+      action.reset().fadeIn(0.2).play();
     }
   }
 }
@@ -849,6 +905,7 @@ function togglePlayPause(play) {
 function setCameraPreset(preset) {
   if (!orbitControls || !model) return;
   const isMiku = (currentLoadedModelType === 'miku');
+  const isMint = (currentLoadedModelType === 'mint');
 
   if (preset === 'full') {
     if (isMiku) {
@@ -856,6 +913,11 @@ function setCameraPreset(preset) {
       camera.position.set(0, 11.0, 27.0);
       orbitControls.minDistance = 2.0;
       orbitControls.maxDistance = 200.0;
+    } else if (isMint) {
+      orbitControls.target.set(0, 0.82, 0);
+      camera.position.set(0, 0.90, 2.3);
+      orbitControls.minDistance = 0.2;
+      orbitControls.maxDistance = 20.0;
     } else {
       orbitControls.target.set(0, 0.05, 0);
       camera.position.set(0, 0.15, 2.7);
@@ -868,6 +930,11 @@ function setCameraPreset(preset) {
       camera.position.set(0, 18.3, 4.2);
       orbitControls.minDistance = 0.5;
       orbitControls.maxDistance = 100.0;
+    } else if (isMint) {
+      orbitControls.target.set(0, 1.47, 0.04);
+      camera.position.set(0, 1.47, 0.45);
+      orbitControls.minDistance = 0.05;
+      orbitControls.maxDistance = 10.0;
     } else {
       orbitControls.target.set(0, 0.70, 0.05);
       camera.position.set(0, 0.70, 0.45);
@@ -880,6 +947,11 @@ function setCameraPreset(preset) {
       camera.position.set(0, 14.0, 11.5);
       orbitControls.minDistance = 1.0;
       orbitControls.maxDistance = 100.0;
+    } else if (isMint) {
+      orbitControls.target.set(0, 1.15, 0.02);
+      camera.position.set(0, 1.18, 1.05);
+      orbitControls.minDistance = 0.1;
+      orbitControls.maxDistance = 10.0;
     } else {
       orbitControls.target.set(0, 0.25, 0.02);
       camera.position.set(0, 0.28, 1.2);
@@ -924,7 +996,7 @@ function exportCustomGLB() {
           const url = URL.createObjectURL(blob);
           const link = document.createElement('a');
           const timeStr = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-          const nameTag = (currentLoadedModelType === 'miku') ? 'miku_custom' : `avatar_${avatarConfig.gender}`;
+          const nameTag = (currentLoadedModelType === 'miku') ? 'miku_custom' : (currentLoadedModelType === 'mint' ? 'mint_custom' : `avatar_${avatarConfig.gender}`);
           link.download = `${nameTag}_${timeStr}.glb`;
           link.href = url;
           link.click();
@@ -957,15 +1029,17 @@ function exportCustomGLB() {
 function syncUiToConfig() {
   const cfg = avatarConfig;
   const isMiku = (cfg.avatarModel === 'miku');
+  const isMint = (cfg.avatarModel === 'mint');
+  const isProcedural = (!isMiku && !isMint);
 
   // Filter cards by active model
   document.querySelectorAll('[data-model]').forEach((el) => {
-    const m = el.dataset.model;
-    if (m === 'miku') {
-      el.style.display = isMiku ? '' : 'none';
-    } else if (m === 'procedural') {
-      el.style.display = isMiku ? 'none' : '';
-    }
+    const models = el.dataset.model.split(',').map(s => s.trim());
+    let show = false;
+    if (isMiku && models.includes('miku')) show = true;
+    if (isMint && models.includes('mint')) show = true;
+    if (isProcedural && models.includes('procedural')) show = true;
+    el.style.display = show ? '' : 'none';
   });
 
   // Single select cards
@@ -1021,6 +1095,7 @@ function setupEventListeners() {
 
       if (type === 'avatar_model') {
         avatarConfig.avatarModel = val;
+        avatarConfig.accessories.clear();
         if (val === 'miku') {
           avatarConfig.gender = 'female';
           avatarConfig.hair = 'Hair_Miku_Twintails';
@@ -1031,16 +1106,28 @@ function setupEventListeners() {
           avatarConfig.accessories.add('Accessory_Miku_Tie');
           avatarConfig.colors.hair = '#ffffff';
           avatarConfig.colors.outfit_primary = '#ffffff';
+        } else if (val === 'mint') {
+          avatarConfig.gender = 'female';
+          avatarConfig.hair = 'Hair_Mint_Full';
+          avatarConfig.outfit = 'Outfit_Mint_Full';
+          avatarConfig.shoes = 'none';
+          avatarConfig.accessories.add('Accessory_Mint_Hat');
+          avatarConfig.accessories.add('Accessory_Mint_ChestBow');
+          avatarConfig.accessories.add('Accessory_Mint_Ribbon');
+          avatarConfig.accessories.add('Outfit_Mint_Accessories');
+          avatarConfig.colors.hair = '#ffffff';
+          avatarConfig.colors.outfit_primary = '#ffffff';
         } else {
           avatarConfig.gender = val;
           avatarConfig.hair = 'Hair_Twintails';
           avatarConfig.outfit = 'Outfit_Sailor';
           avatarConfig.shoes = 'Shoes_Loafers';
+          avatarConfig.accessories.add('Accessory_CatEars');
           avatarConfig.colors.hair = '#33c7df';
           avatarConfig.colors.outfit_primary = '#1e293b';
         }
         syncUiToConfig();
-        loadModularModel(val === 'miku' ? 'miku' : 'procedural');
+        loadModularModel(val === 'miku' ? 'miku' : (val === 'mint' ? 'mint' : 'procedural'));
         return;
       } else if (type === 'hair') {
         avatarConfig.hair = val;
@@ -1187,6 +1274,22 @@ function setupEventListeners() {
 }
 
 function randomizeAvatar() {
+  if (currentLoadedModelType === 'mint') {
+    const mintHairs = ['Hair_Mint_Full', 'Hair_Mint_Front', 'none'];
+    const mintOutfits = ['Outfit_Mint_Full', 'Outfit_Mint_Bikini', 'Outfit_Mint_SkirtOnly', 'none'];
+    const colors = ['#ffffff', '#ff85a2', '#ffd255', '#33c7df', '#a56de2', '#18181b'];
+    avatarConfig.hair = mintHairs[Math.floor(Math.random() * mintHairs.length)];
+    avatarConfig.outfit = mintOutfits[Math.floor(Math.random() * mintOutfits.length)];
+    avatarConfig.colors.hair = colors[Math.floor(Math.random() * colors.length)];
+    avatarConfig.colors.outfit_primary = colors[Math.floor(Math.random() * colors.length)];
+    if (Math.random() > 0.5) avatarConfig.accessories.add('Accessory_Mint_Hat'); else avatarConfig.accessories.delete('Accessory_Mint_Hat');
+    if (Math.random() > 0.5) avatarConfig.accessories.add('Accessory_Mint_ChestBow'); else avatarConfig.accessories.delete('Accessory_Mint_ChestBow');
+    if (Math.random() > 0.5) avatarConfig.accessories.add('Accessory_Mint_Ribbon'); else avatarConfig.accessories.delete('Accessory_Mint_Ribbon');
+    syncUiToConfig();
+    applyAvatarConfiguration();
+    return;
+  }
+
   const hairs = ['Hair_Twintails', 'Hair_Bob', 'Hair_Hime', 'Hair_Spiky', 'Hair_Parted'];
   const outfits = ['Outfit_Sailor', 'Outfit_Blazer', 'Outfit_Hoodie', 'Outfit_Casual'];
   const eyes = ['moe', 'cool', 'gentle', 'cat'];
@@ -1201,6 +1304,7 @@ function randomizeAvatar() {
   avatarConfig.colors.iris = irisColors[Math.floor(Math.random() * irisColors.length)];
   avatarConfig.colors.outfit_primary = outfitColors[Math.floor(Math.random() * outfitColors.length)];
 
+  syncUiToConfig();
   applyAvatarConfiguration();
 }
 

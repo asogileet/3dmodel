@@ -115,11 +115,16 @@
           <!-- 1. Gender & Base Body -->
           <section class="panel-section active" id="sec-gender">
             <h2>角色模組與素體選擇</h2>
-            <div class="card-grid col-3">
+            <div class="card-grid col-2">
               <div class="opt-card active" data-type="avatar_model" data-val="miku">
                 <div class="card-icon">👑</div>
                 <div class="card-title">初音未來 (高精)</div>
                 <div class="card-desc">SEGA 官方高精拆解模組、手繪動漫貼圖</div>
+              </div>
+              <div class="opt-card" data-type="avatar_model" data-val="mint">
+                <div class="card-icon">🌺</div>
+                <div class="card-title">薄荷 Mint (水著)</div>
+                <div class="card-desc">《異環》NTE 官方高精拆解模組、2D Flat 動漫渲、24秒靈動展示</div>
               </div>
               <div class="opt-card" data-type="avatar_model" data-val="female">
                 <div class="card-icon">👧</div>
@@ -133,7 +138,7 @@
               </div>
             </div>
 
-            <div class="control-group mt-3">
+            <div class="control-group mt-3" data-model="procedural">
               <label>皮膚基底色調 (Skin Tone)</label>
               <div class="color-palette" data-target="skin">
                 <button class="color-dot active" style="background:#fff0ea;" data-color="#fff0ea" title="冷白瓷膚"></button>
@@ -149,35 +154,45 @@
           <section class="panel-section" id="sec-hair">
             <h2>日系髮型選擇</h2>
             <div class="card-grid col-2">
-              <div class="opt-card active" data-type="hair" data-val="Hair_Miku_Twintails">
+              <div class="opt-card active" data-type="hair" data-val="Hair_Miku_Twintails" data-model="miku">
                 <div class="card-icon">🌟</div>
                 <div class="card-title">初音高精雙馬尾</div>
                 <div class="card-desc">經典手繪材質、飄逸動態物理骨骼</div>
               </div>
-              <div class="opt-card" data-type="hair" data-val="Hair_Twintails">
+              <div class="opt-card" data-type="hair" data-val="Hair_Twintails" data-model="miku,procedural">
                 <div class="card-icon">👧</div>
                 <div class="card-title">幾何雙馬尾</div>
                 <div class="card-desc">齊瀏海 + 幾何立體高馬尾</div>
               </div>
-              <div class="opt-card" data-type="hair" data-val="Hair_Bob">
+              <div class="opt-card" data-type="hair" data-val="Hair_Bob" data-model="miku,procedural">
                 <div class="card-icon">💇‍♀️</div>
                 <div class="card-title">日系波波短髮</div>
                 <div class="card-desc">俏麗圓潤、空氣瀏海</div>
               </div>
-              <div class="opt-card" data-type="hair" data-val="Hair_Hime">
+              <div class="opt-card" data-type="hair" data-val="Hair_Hime" data-model="miku,procedural">
                 <div class="card-icon">👩</div>
                 <div class="card-title">黑長直姬髮</div>
                 <div class="card-desc">優雅垂背長直 + 姬鬢角</div>
               </div>
-              <div class="opt-card" data-type="hair" data-val="Hair_Spiky">
+              <div class="opt-card" data-type="hair" data-val="Hair_Spiky" data-model="miku,procedural">
                 <div class="card-icon">👦</div>
                 <div class="card-title">熱血碎短髮</div>
                 <div class="card-desc">少年動漫刺蝟層次</div>
               </div>
-              <div class="opt-card" data-type="hair" data-val="Hair_Parted">
+              <div class="opt-card" data-type="hair" data-val="Hair_Parted" data-model="miku,procedural">
                 <div class="card-icon">🧑</div>
                 <div class="card-title">清爽三七分</div>
                 <div class="card-desc">文藝學長微捲側分</div>
+              </div>
+              <div class="opt-card" data-type="hair" data-val="Hair_Mint_Full" data-model="mint">
+                <div class="card-icon">🌺</div>
+                <div class="card-title">薄荷長雙馬尾</div>
+                <div class="card-desc">《異環》薄荷標誌性動漫飄逸長髮</div>
+              </div>
+              <div class="opt-card" data-type="hair" data-val="Hair_Mint_Front" data-model="mint">
+                <div class="card-icon">💇‍♀️</div>
+                <div class="card-title">薄荷前髮短瀏海</div>
+                <div class="card-desc">單穿俏麗前髮短瀏海</div>
               </div>
               <div class="opt-card" data-type="hair" data-val="none">
                 <div class="card-icon">🚫</div>
@@ -205,7 +220,12 @@
           <!-- 3. Face & Expressions -->
           <section class="panel-section" id="sec-face">
             <h2>五官與動漫眼神</h2>
-            <div class="card-grid col-2">
+            <div data-model="miku,mint" style="padding: 16px; background: rgba(56, 189, 248, 0.08); border-radius: 10px; border: 1px solid rgba(56, 189, 248, 0.25); margin-bottom: 16px;">
+              <div style="font-weight: 600; color: #38bdf8; margin-bottom: 6px; font-size: 0.95rem;">✨ 官方高精 3D 手繪五官與眼眸</div>
+              <div style="font-size: 0.84rem; color: #94a3b8; line-height: 1.6;">當前角色（初音 / 薄荷）內建原廠高精度 3D 瞳孔、立體睫毛與手繪高光貼圖，已預設套用最佳日系動漫臉部渲染！</div>
+            </div>
+
+            <div class="card-grid col-2" data-model="procedural">
               <div class="opt-card active" data-type="eye_style" data-val="moe">
                 <div class="card-icon">✨</div>
                 <div class="card-title">萌系水汪汪大眼</div>
@@ -228,7 +248,7 @@
               </div>
             </div>
 
-            <div class="control-group mt-3">
+            <div class="control-group mt-3" data-model="procedural">
               <label>動漫瞳色 (Iris Color)</label>
               <div class="color-palette" data-target="iris">
                 <button class="color-dot active" style="background:#2288ff;" data-color="#2288ff" title="海藍寶"></button>
@@ -240,7 +260,7 @@
               </div>
             </div>
 
-            <div class="control-group mt-3">
+            <div class="control-group mt-3" data-model="procedural">
               <label>表情與腮紅 (Expression)</label>
               <div class="card-grid col-3">
                 <button class="btn-sub active" data-expr="smile">微笑 😊</button>
@@ -288,6 +308,21 @@
                 <div class="card-icon">👕</div>
                 <div class="card-title">簡約日常休閒裝</div>
                 <div class="card-desc">休閒短T + 修身丹寧褲</div>
+              </div>
+              <div class="opt-card" data-type="outfit" data-val="Outfit_Mint_Full" data-model="mint">
+                <div class="card-icon">🌺</div>
+                <div class="card-title">薄荷泳裝 (全套)</div>
+                <div class="card-desc">夏日比基尼 + 蕾絲薄紗裙</div>
+              </div>
+              <div class="opt-card" data-type="outfit" data-val="Outfit_Mint_Bikini" data-model="mint">
+                <div class="card-icon">👙</div>
+                <div class="card-title">純比基尼泳衣</div>
+                <div class="card-desc">單穿清爽夏日比基尼</div>
+              </div>
+              <div class="opt-card" data-type="outfit" data-val="Outfit_Mint_SkirtOnly" data-model="mint">
+                <div class="card-icon">👗</div>
+                <div class="card-title">薄荷蕾絲薄紗裙</div>
+                <div class="card-desc">單穿微透蕾絲飄逸裙</div>
               </div>
               <div class="opt-card" data-type="outfit" data-val="none">
                 <div class="card-icon">🚫</div>
@@ -362,6 +397,26 @@
                 <div class="card-icon">👓</div>
                 <div class="card-title">時尚黑框眼鏡</div>
                 <div class="card-desc">點擊開啟 / 隱藏</div>
+              </div>
+              <div class="opt-card toggle-card active" data-toggle="Accessory_Mint_Hat" data-model="mint">
+                <div class="card-icon">👒</div>
+                <div class="card-title">夏日度假草帽</div>
+                <div class="card-desc">薄荷專屬大帽簷草帽</div>
+              </div>
+              <div class="opt-card toggle-card active" data-toggle="Accessory_Mint_ChestBow" data-model="mint">
+                <div class="card-icon">🎀</div>
+                <div class="card-title">胸前立體蝴蝶結</div>
+                <div class="card-desc">泳裝胸前蝴蝶結飾品</div>
+              </div>
+              <div class="opt-card toggle-card active" data-toggle="Accessory_Mint_Ribbon" data-model="mint">
+                <div class="card-icon">🎗️</div>
+                <div class="card-title">腰際飄逸緞帶</div>
+                <div class="card-desc">隨步態律動的泳裝飄帶</div>
+              </div>
+              <div class="opt-card toggle-card active" data-toggle="Outfit_Mint_Accessories" data-model="mint">
+                <div class="card-icon">💍</div>
+                <div class="card-title">泳裝手環與腿環</div>
+                <div class="card-desc">手腕與大腿飾品</div>
               </div>
             </div>
           </section>
