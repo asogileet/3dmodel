@@ -355,7 +355,7 @@ function drawBlush(ctx, cx, cy) {
 function loadModularModel(targetModelType = avatarConfig.avatarModel) {
   const loader = new GLTFLoader();
   const isMiku = (targetModelType === 'miku');
-  const isMint = (targetModelType === 'mint');
+  const isMint = (targetModelType === 'mint' || targetModelType === 'miku_mint');
   let url = 'anime_avatar_modular.glb?v=2.0';
   let title = '載入原創紙娃娃模型中...';
   let desc = '初始化 16 款動漫幾何模組與 3D 骨架中...';
@@ -363,10 +363,10 @@ function loadModularModel(targetModelType = avatarConfig.avatarModel) {
   if (isMiku) {
     url = 'miku_modular.glb?v=4.0';
     title = '載入初音未來模組化紙娃娃中...';
-    desc = '初始化 SEGA 高精手繪部件、多款日系假髮與動作庫...';
+    desc = '初始化 SEGA 高精手繪部件、比基尼素體與多款日系假髮...';
   } else if (isMint) {
-    url = 'mint_modular.glb?v=2.0';
-    title = '載入薄荷 Mint (Neverness To Everness) 中...';
+    url = 'mint_modular.glb?v=3.0';
+    title = (targetModelType === 'miku_mint') ? '載入初音水著 (夢幻聯動) 中...' : '載入薄荷 Mint (Neverness To Everness) 中...';
     desc = '初始化 2D Flat 動漫渲、Unlit Emission 材質與 24 秒官方靈動展示舞步...';
   }
 
@@ -551,20 +551,42 @@ function applyAvatarConfiguration() {
     // 6. Accessories
     setMeshVisibility('Accessory_Miku_Headset', cfg.accessories.has('Accessory_Miku_Headset'));
     setMeshVisibility('Accessory_Miku_Tie', cfg.accessories.has('Accessory_Miku_Tie') && (isFull || isTopOnly));
-  } else if (currentLoadedModelType === 'mint') {
-    // === MINT MODULAR PARTS ===
-    // 1. Hair
-    const hasBack = (cfg.hair === 'Hair_Mint_Full');
-    const hasFront = (cfg.hair === 'Hair_Mint_Full' || cfg.hair === 'Hair_Mint_Front');
-    setMeshVisibility('Hair_Mint_Back', hasBack);
-    setMeshVisibility('Hair_Mint_Front', hasFront);
+  } else if (currentLoadedModelType === 'mint' || currentLoadedModelType === 'miku_mint') {
+    // === MINT / MIKU SWIMSUIT CROSSOVER ===
+    const isMikuHead = (cfg.avatarModel === 'miku_mint' || cfg.hair === 'Hair_Miku_Twintails');
 
-    // 2. Head & Facial Features
-    setMeshVisibility('Head_Mint_Face', true);
-    setMeshVisibility('Face_Mint_Eyes', true);
-    setMeshVisibility('Face_Mint_Eyelashes', true);
-    setMeshVisibility('Face_Mint_Highlight', true);
-    setMeshVisibility('Face_Mint_Mask', true);
+    if (isMikuHead) {
+      // 1. Show Miku Head, Long Twintails, and Cyber Headset
+      setMeshVisibility('Head_Miku_Face', true);
+      setMeshVisibility('Hair_Miku_Twintails', true);
+      setMeshVisibility('Accessory_Miku_Headset', cfg.accessories.has('Accessory_Miku_Headset'));
+
+      // 2. Hide Mint Head, Face features, and Mint Hair
+      setMeshVisibility('Head_Mint_Face', false);
+      setMeshVisibility('Face_Mint_Eyes', false);
+      setMeshVisibility('Face_Mint_Eyelashes', false);
+      setMeshVisibility('Face_Mint_Highlight', false);
+      setMeshVisibility('Face_Mint_Mask', false);
+      setMeshVisibility('Hair_Mint_Back', false);
+      setMeshVisibility('Hair_Mint_Front', false);
+    } else {
+      // 1. Hide Miku Head and Twintails
+      setMeshVisibility('Head_Miku_Face', false);
+      setMeshVisibility('Hair_Miku_Twintails', false);
+      setMeshVisibility('Accessory_Miku_Headset', false);
+
+      // 2. Show Mint Head, Face features, and Mint Hair
+      const hasBack = (cfg.hair === 'Hair_Mint_Full');
+      const hasFront = (cfg.hair === 'Hair_Mint_Full' || cfg.hair === 'Hair_Mint_Front');
+      setMeshVisibility('Hair_Mint_Back', hasBack);
+      setMeshVisibility('Hair_Mint_Front', hasFront);
+
+      setMeshVisibility('Head_Mint_Face', true);
+      setMeshVisibility('Face_Mint_Eyes', true);
+      setMeshVisibility('Face_Mint_Eyelashes', true);
+      setMeshVisibility('Face_Mint_Highlight', true);
+      setMeshVisibility('Face_Mint_Mask', true);
+    }
 
     // 3. Outfits
     // Note: In commercial anime game models like NTE Mint, the body skin and swimsuit are
@@ -1029,7 +1051,7 @@ function exportCustomGLB() {
 function syncUiToConfig() {
   const cfg = avatarConfig;
   const isMiku = (cfg.avatarModel === 'miku');
-  const isMint = (cfg.avatarModel === 'mint');
+  const isMint = (cfg.avatarModel === 'mint' || cfg.avatarModel === 'miku_mint');
   const isProcedural = (!isMiku && !isMint);
 
   // Filter cards by active model
@@ -1106,6 +1128,18 @@ function setupEventListeners() {
           avatarConfig.accessories.add('Accessory_Miku_Tie');
           avatarConfig.colors.hair = '#ffffff';
           avatarConfig.colors.outfit_primary = '#ffffff';
+        } else if (val === 'miku_mint') {
+          avatarConfig.gender = 'female';
+          avatarConfig.hair = 'Hair_Miku_Twintails';
+          avatarConfig.outfit = 'Outfit_Mint_Full';
+          avatarConfig.shoes = 'none';
+          avatarConfig.accessories.add('Accessory_Miku_Headset');
+          avatarConfig.accessories.add('Accessory_Mint_Hat');
+          avatarConfig.accessories.add('Accessory_Mint_ChestBow');
+          avatarConfig.accessories.add('Accessory_Mint_Ribbon');
+          avatarConfig.accessories.add('Outfit_Mint_Accessories');
+          avatarConfig.colors.hair = '#ffffff';
+          avatarConfig.colors.outfit_primary = '#ffffff';
         } else if (val === 'mint') {
           avatarConfig.gender = 'female';
           avatarConfig.hair = 'Hair_Mint_Full';
@@ -1127,7 +1161,7 @@ function setupEventListeners() {
           avatarConfig.colors.outfit_primary = '#1e293b';
         }
         syncUiToConfig();
-        loadModularModel(val === 'miku' ? 'miku' : (val === 'mint' ? 'mint' : 'procedural'));
+        loadModularModel(val === 'miku' ? 'miku' : ((val === 'mint' || val === 'miku_mint') ? 'mint' : 'procedural'));
         return;
       } else if (type === 'hair') {
         avatarConfig.hair = val;
