@@ -204,6 +204,21 @@ def add_actions(arm_obj):
         insert_rot('RightLowerArm', f, 2.3, 0.0, 0.0)
         insert_rot('Chest', f, 0.05, 0.0, 0.0)
         insert_rot('Head',  f, -0.04, 0.0, 0.0)
+
+    # --- 6. BOW (50 frames - respectful Japanese bow) ---
+    bow_act = bpy.data.actions.new(name='Bow')
+    arm_obj.animation_data.action = bow_act
+    for f, sp_x, ch_x, hd_x in [
+        (1,  0.0,  0.0,  0.0),
+        (20, 0.35, 0.25, 0.10),
+        (30, 0.35, 0.25, 0.10),
+        (50, 0.0,  0.0,  0.0)
+    ]:
+        insert_rot('Spine', f, sp_x, 0, 0)
+        insert_rot('Chest', f, ch_x, 0, 0)
+        insert_rot('Head',  f, hd_x, 0, 0)
+        insert_rot('RightUpperArm', f, -sp_x * 0.4, 0, -0.1)
+        insert_rot('LeftUpperArm',  f, -sp_x * 0.4, 0,  0.1)
         
     # Set Idle as active action
     arm_obj.animation_data.action = idle_act

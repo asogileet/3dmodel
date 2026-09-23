@@ -335,7 +335,7 @@ function drawBlush(ctx, cx, cy) {
 // -----------------------------------------------------------------------------
 function loadModularModel() {
   const loader = new GLTFLoader();
-  const url = 'anime_avatar_modular.glb?v=1.4';
+  const url = 'anime_avatar_modular.glb?v=1.5';
 
   exportModal.style.display = 'flex';
   modalTitle.textContent = '載入日系卡漫紙娃娃中...';

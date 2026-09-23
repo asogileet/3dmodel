@@ -703,15 +703,21 @@ function updateProceduralAnimations(delta) {
   }
   else if (currentAnim === 'bow') {
     const bowCycle = Math.sin(t * 1.8);
-    const angle = Math.max(0, bowCycle) * 0.6;
-    if (hips) hips.rotation.x = angle * 0.5;
-    if (spine) spine.rotation.x = angle * 0.6;
-    if (chest) chest.rotation.x = angle * 0.4;
-    if (head) head.rotation.x = angle * 0.3;
-    if (rArm) rArm.rotation.x = angle * 0.4;
-    if (lArm) lArm.rotation.x = angle * 0.4;
-    if (lHair1) lHair1.rotation.x = angle * 0.5;
-    if (rHair1) rHair1.rotation.x = angle * 0.5;
+    // Smooth bow: only bend upper body (spine, chest, head) while keeping feet & legs firmly on ground
+    const angle = Math.max(0, bowCycle) * 0.55;
+    if (spine) spine.rotation.x = angle * 0.45;
+    if (chest) chest.rotation.x = angle * 0.35;
+    if (head) head.rotation.x = angle * 0.15;
+    if (rArm) {
+      rArm.rotation.x = -angle * 0.25;
+      rArm.rotation.z = -0.10;
+    }
+    if (lArm) {
+      lArm.rotation.x = -angle * 0.25;
+      lArm.rotation.z = 0.10;
+    }
+    if (lHair1) lHair1.rotation.x = angle * 0.45;
+    if (rHair1) rHair1.rotation.x = angle * 0.45;
   }
 }
 
