@@ -361,7 +361,7 @@ function loadModularModel(targetModelType = avatarConfig.avatarModel) {
   let desc = '初始化 16 款動漫幾何模組與 3D 骨架中...';
 
   if (isMiku) {
-    url = 'miku_modular.glb?v=3.0';
+    url = 'miku_modular.glb?v=4.0';
     title = '載入初音未來模組化紙娃娃中...';
     desc = '初始化 SEGA 高精手繪部件、多款日系假髮與動作庫...';
   } else if (isMint) {
@@ -526,20 +526,18 @@ function applyAvatarConfiguration() {
     setMeshVisibility('Face_Eyes_Right', true);
     setMeshVisibility('Face_Mouth_Miku', true);
 
-    // 3. Outfits (Independent Top & Skirt)
-    if (cfg.outfit === 'Outfit_Miku_Full') {
-      setMeshVisibility('Outfit_Miku_Top', true);
-      setMeshVisibility('Outfit_Miku_Skirt', true);
-    } else if (cfg.outfit === 'Outfit_Miku_Top') {
-      setMeshVisibility('Outfit_Miku_Top', true);
-      setMeshVisibility('Outfit_Miku_Skirt', false);
-    } else if (cfg.outfit === 'Outfit_Miku_Skirt') {
-      setMeshVisibility('Outfit_Miku_Top', false);
-      setMeshVisibility('Outfit_Miku_Skirt', true);
-    } else {
-      setMeshVisibility('Outfit_Miku_Top', false);
-      setMeshVisibility('Outfit_Miku_Skirt', false);
-    }
+    // 3. Outfits (Formula Uniform & Custom Bikini Base Body)
+    const isFull = (cfg.outfit === 'Outfit_Miku_Full');
+    const isTopOnly = (cfg.outfit === 'Outfit_Miku_Top');
+    const isSkirtOnly = (cfg.outfit === 'Outfit_Miku_Skirt');
+    const isBikini = (cfg.outfit === 'Outfit_Miku_Bikini' || cfg.outfit === 'none');
+
+    // Uniform Top & Skirt visibility
+    setMeshVisibility('Outfit_Miku_Top', isFull || isTopOnly);
+    setMeshVisibility('Outfit_Miku_Skirt', isFull || isSkirtOnly);
+
+    // Bikini Base Body: visible when bikini/none (pure bikini) or skirt only (bikini top + skirt)
+    setMeshVisibility('Body_Miku_Bikini', isBikini || isSkirtOnly);
 
     // 4. Sleeves
     const hasSleeves = cfg.accessories.has('Outfit_Miku_Sleeves');
@@ -552,7 +550,7 @@ function applyAvatarConfiguration() {
 
     // 6. Accessories
     setMeshVisibility('Accessory_Miku_Headset', cfg.accessories.has('Accessory_Miku_Headset'));
-    setMeshVisibility('Accessory_Miku_Tie', cfg.accessories.has('Accessory_Miku_Tie'));
+    setMeshVisibility('Accessory_Miku_Tie', cfg.accessories.has('Accessory_Miku_Tie') && (isFull || isTopOnly));
   } else if (currentLoadedModelType === 'mint') {
     // === MINT MODULAR PARTS ===
     // 1. Hair
