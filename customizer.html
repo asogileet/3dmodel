@@ -66,17 +66,62 @@
           </button>
         </div>
 
-        <!-- Animation Controls Bottom Bar -->
-        <div class="anim-toolbar">
-          <div class="anim-label">動作預覽:</div>
-          <button class="anim-btn active" data-anim="idle">待機呼吸</button>
-          <button class="anim-btn" data-anim="walk">輕快踏步</button>
-          <button class="anim-btn" data-anim="dance">偶像舞蹈</button>
-          <button class="anim-btn" data-anim="wave">揮手打招呼</button>
-          <button class="anim-btn" data-anim="salute">軍禮敬禮</button>
-          <button class="anim-btn" data-anim="pose">定格拍照 Pose</button>
-          <div class="anim-sep"></div>
-          <button class="anim-btn" id="btn-play-pause">⏸️</button>
+        <!-- Action & Command Center Bottom Bar -->
+        <div class="action-center-container">
+          <!-- Command Input Console -->
+          <div class="cmd-bar-wrapper">
+            <div class="cmd-input-bar">
+              <span class="cmd-prompt-icon">⚡</span>
+              <input type="text" id="anim-cmd-input" placeholder="輸入指令如 /wave, /dance, /walk, /speed 1.5 ... (按 Enter 執行)" autocomplete="off" spellcheck="false" />
+              <button id="btn-run-cmd" class="cmd-btn-primary">執行</button>
+              <button id="btn-toggle-cmd-guide" class="cmd-btn-icon" title="查看可用指令手冊">📖</button>
+            </div>
+            <!-- Feedback / Status message -->
+            <div id="cmd-feedback-msg" class="cmd-feedback-msg"></div>
+            <!-- Quick Chips -->
+            <div class="cmd-chips-bar">
+              <span class="cmd-chips-title">快捷指令:</span>
+              <button class="cmd-chip-btn" data-cmd="/idle">/idle</button>
+              <button class="cmd-chip-btn" data-cmd="/walk">/walk</button>
+              <button class="cmd-chip-btn" data-cmd="/dance">/dance</button>
+              <button class="cmd-chip-btn" data-cmd="/wave">/wave</button>
+              <button class="cmd-chip-btn" data-cmd="/salute">/salute</button>
+              <button class="cmd-chip-btn" data-cmd="/pose">/pose</button>
+              <button class="cmd-chip-btn" data-cmd="/speed 1.5">/speed 1.5</button>
+              <button class="cmd-chip-btn" data-cmd="/stop">/stop</button>
+            </div>
+            <!-- Collapsible Guide Panel -->
+            <div id="cmd-guide-popup" class="cmd-guide-popup" style="display: none;">
+              <div class="cmd-guide-header">
+                <strong>⚡ 動作指令速查手冊</strong>
+                <button id="btn-close-cmd-guide" class="guide-close-btn">✕</button>
+              </div>
+              <div class="cmd-guide-content">
+                <div class="cmd-guide-item"><code>/idle</code> 待機呼吸與微風擺動</div>
+                <div class="cmd-guide-item"><code>/walk [速度]</code> 踏步走動 (例如 <code>/walk 1.5</code>)</div>
+                <div class="cmd-guide-item"><code>/dance [速度]</code> 偶像活力律動舞蹈</div>
+                <div class="cmd-guide-item"><code>/wave</code> 揮手熱情打招呼</div>
+                <div class="cmd-guide-item"><code>/salute</code> 帥氣立正敬禮</div>
+                <div class="cmd-guide-item"><code>/pose</code> 偶像定格拍照姿勢</div>
+                <div class="cmd-guide-item"><code>/speed &lt;數值&gt;</code> 調整動畫播放速度 (例如 <code>/speed 2.0</code>)</div>
+                <div class="cmd-guide-item"><code>/play</code> / <code>/pause</code> / <code>/stop</code> 播放或暫停當前動作</div>
+                <div class="cmd-guide-item"><code>/reset</code> 重設骨骼角度至預設 T-Pose</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Animation Controls Quick Bar -->
+          <div class="anim-toolbar">
+            <div class="anim-label">動作預覽:</div>
+            <button class="anim-btn active" data-anim="idle">待機呼吸</button>
+            <button class="anim-btn" data-anim="walk">輕快踏步</button>
+            <button class="anim-btn" data-anim="dance">偶像舞蹈</button>
+            <button class="anim-btn" data-anim="wave">揮手打招呼</button>
+            <button class="anim-btn" data-anim="salute">軍禮敬禮</button>
+            <button class="anim-btn" data-anim="pose">定格拍照 Pose</button>
+            <div class="anim-sep"></div>
+            <button class="anim-btn" id="btn-play-pause">⏸️</button>
+          </div>
         </div>
       </main>
 

@@ -1323,16 +1323,205 @@ function setupEventListeners() {
       document.querySelectorAll('.anim-btn[data-anim]').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       playAnimation(btn.dataset.anim);
+      showCommandFeedback(`⚡ 執行動作: /${btn.dataset.anim}`, 'success');
     });
   });
 
   document.getElementById('btn-play-pause').addEventListener('click', () => togglePlayPause());
+
+  // Command Bar & Console System
+  initActionCommandSystem();
 
   // Random Avatar Button
   document.getElementById('btn-random-avatar').addEventListener('click', randomizeAvatar);
 
   // Export GLB Button
   document.getElementById('btn-export-glb').addEventListener('click', exportCustomGLB);
+}
+
+// -----------------------------------------------------------------------------
+// Interactive Action Command Console System
+// -----------------------------------------------------------------------------
+const cmdHistory = [];
+let cmdHistoryIndex = -1;
+
+function showCommandFeedback(msg, type = 'info') {
+  const el = document.getElementById('cmd-feedback-msg');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = `cmd-feedback-msg ${type}`;
+}
+
+function updateActiveAnimButton(animName) {
+  document.querySelectorAll('.anim-btn[data-anim]').forEach(b => {
+    if (b.dataset.anim === animName) {
+      b.classList.add('active');
+    } else {
+      b.classList.remove('active');
+    }
+  });
+}
+
+function executeActionCommand(rawInput) {
+  if (!rawInput || !rawInput.trim()) return;
+  const raw = rawInput.trim();
+  cmdHistory.push(raw);
+  cmdHistoryIndex = cmdHistory.length;
+
+  const clean = raw.startsWith('/') ? raw.slice(1).trim() : raw;
+  const parts = clean.split(/\s+/);
+  const action = parts[0].toLowerCase();
+  const arg1 = parts[1];
+
+  switch (action) {
+    case 'idle':
+      playAnimation('idle');
+      updateActiveAnimButton('idle');
+      showCommandFeedback('✅ [指令成功] 角色已切換至 待機呼吸 狀態 (/idle)', 'success');
+      break;
+
+    case 'walk':
+      if (arg1 && !isNaN(parseFloat(arg1))) {
+        animSpeed = Math.max(0.2, Math.min(4.0, parseFloat(arg1)));
+      }
+      playAnimation('walk');
+      updateActiveAnimButton('walk');
+      showCommandFeedback(`✅ [指令成功] 角色踏步前進 (/walk 速度: ${animSpeed.toFixed(1)}x)`, 'success');
+      break;
+
+    case 'dance':
+      if (arg1 && !isNaN(parseFloat(arg1))) {
+        animSpeed = Math.max(0.2, Math.min(4.0, parseFloat(arg1)));
+      }
+      playAnimation('dance');
+      updateActiveAnimButton('dance');
+      showCommandFeedback(`✅ [指令成功] 偶像舞蹈律動中 (/dance 速度: ${animSpeed.toFixed(1)}x)`, 'success');
+      break;
+
+    case 'wave':
+      playAnimation('wave');
+      updateActiveAnimButton('wave');
+      showCommandFeedback('✅ [指令成功] 揮手打招呼中 (/wave)', 'success');
+      break;
+
+    case 'salute':
+      playAnimation('salute');
+      updateActiveAnimButton('salute');
+      showCommandFeedback('✅ [指令成功] 軍禮立正敬禮 (/salute)', 'success');
+      break;
+
+    case 'pose':
+      playAnimation('pose');
+      updateActiveAnimButton('pose');
+      showCommandFeedback('✅ [指令成功] 拍照定格 Pose (/pose)', 'success');
+      break;
+
+    case 'speed':
+      if (arg1 && !isNaN(parseFloat(arg1))) {
+        animSpeed = Math.max(0.1, Math.min(5.0, parseFloat(arg1)));
+        if (mixer && isPlaying) mixer.timeScale = animSpeed;
+        showCommandFeedback(`⚡ [速度調整] 動畫播放速度設定為: ${animSpeed.toFixed(1)}x`, 'success');
+      } else {
+        showCommandFeedback('⚠️ [語法格式] 請指定數值，例如: /speed 1.5', 'error');
+      }
+      break;
+
+    case 'pause':
+    case 'stop':
+      togglePlayPause(false);
+      showCommandFeedback('⏸️ [指令暫停] 動作已暫停 (/pause)', 'info');
+      break;
+
+    case 'play':
+    case 'resume':
+      togglePlayPause(true);
+      showCommandFeedback('▶️ [指令繼續] 動作繼續播放 (/play)', 'success');
+      break;
+
+    case 'reset':
+      resetAllBones();
+      animTime = 0;
+      showCommandFeedback('🔄 [重設骨骼] 角色所有關節已重設至預設姿勢 (/reset)', 'info');
+      break;
+
+    case 'help':
+      const guide = document.getElementById('cmd-guide-popup');
+      if (guide) guide.style.display = 'block';
+      showCommandFeedback('📖 [說明手冊] 已開啟動作指令列表', 'info');
+      break;
+
+    default:
+      showCommandFeedback(`⚠️ 未知指令: "${raw}"，請輸入 /help 或點擊 📖 查看可用指令`, 'error');
+      break;
+  }
+}
+
+function initActionCommandSystem() {
+  const input = document.getElementById('anim-cmd-input');
+  const runBtn = document.getElementById('btn-run-cmd');
+  const toggleGuideBtn = document.getElementById('btn-toggle-cmd-guide');
+  const closeGuideBtn = document.getElementById('btn-close-cmd-guide');
+  const guidePopup = document.getElementById('cmd-guide-popup');
+
+  if (runBtn && input) {
+    runBtn.addEventListener('click', () => {
+      executeActionCommand(input.value);
+      input.value = '';
+    });
+  }
+
+  if (input) {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        executeActionCommand(input.value);
+        input.value = '';
+      } else if (e.key === 'ArrowUp') {
+        if (cmdHistory.length > 0 && cmdHistoryIndex > 0) {
+          cmdHistoryIndex--;
+          input.value = cmdHistory[cmdHistoryIndex];
+        }
+      } else if (e.key === 'ArrowDown') {
+        if (cmdHistoryIndex < cmdHistory.length - 1) {
+          cmdHistoryIndex++;
+          input.value = cmdHistory[cmdHistoryIndex];
+        } else {
+          cmdHistoryIndex = cmdHistory.length;
+          input.value = '';
+        }
+      }
+    });
+  }
+
+  // Quick Command Chips
+  document.querySelectorAll('.cmd-chip-btn').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const cmd = chip.dataset.cmd;
+      if (input) input.value = cmd;
+      executeActionCommand(cmd);
+    });
+  });
+
+  // Guide Popup Toggles
+  if (toggleGuideBtn && guidePopup) {
+    toggleGuideBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      guidePopup.style.display = (guidePopup.style.display === 'none' || !guidePopup.style.display) ? 'block' : 'none';
+    });
+  }
+
+  if (closeGuideBtn && guidePopup) {
+    closeGuideBtn.addEventListener('click', () => {
+      guidePopup.style.display = 'none';
+    });
+  }
+
+  document.addEventListener('click', (e) => {
+    if (guidePopup && guidePopup.style.display === 'block') {
+      if (!guidePopup.contains(e.target) && e.target !== toggleGuideBtn) {
+        guidePopup.style.display = 'none';
+      }
+    }
+  });
 }
 
 function randomizeAvatar() {
