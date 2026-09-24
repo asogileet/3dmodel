@@ -80,20 +80,22 @@
             <div id="cmd-feedback-msg" class="cmd-feedback-msg"></div>
             <!-- Quick Chips -->
             <div class="cmd-chips-bar">
-              <span class="cmd-chips-title">快捷指令:</span>
+              <span class="cmd-chips-title">快捷:</span>
               <button class="cmd-chip-btn" data-cmd="/idle">/idle</button>
               <button class="cmd-chip-btn" data-cmd="/walk">/walk</button>
               <button class="cmd-chip-btn" data-cmd="/dance">/dance</button>
               <button class="cmd-chip-btn" data-cmd="/wave">/wave</button>
               <button class="cmd-chip-btn" data-cmd="/salute">/salute</button>
               <button class="cmd-chip-btn" data-cmd="/pose">/pose</button>
+              <button class="cmd-chip-btn highlight" data-cmd="/combo walk wave">/combo walk wave</button>
+              <button class="cmd-chip-btn highlight" data-cmd="/combo walk salute">/combo walk salute</button>
+              <button class="cmd-chip-btn lookat-btn" data-cmd="/lookat toggle" id="chip-lookat-toggle">👀 /lookat (眼神跟隨)</button>
               <button class="cmd-chip-btn" data-cmd="/speed 1.5">/speed 1.5</button>
-              <button class="cmd-chip-btn" data-cmd="/stop">/stop</button>
             </div>
             <!-- Collapsible Guide Panel -->
             <div id="cmd-guide-popup" class="cmd-guide-popup" style="display: none;">
               <div class="cmd-guide-header">
-                <strong>⚡ 動作指令速查手冊</strong>
+                <strong>⚡ 動作指令速查手冊 (支援分層與眼神注視)</strong>
                 <button id="btn-close-cmd-guide" class="guide-close-btn">✕</button>
               </div>
               <div class="cmd-guide-content">
@@ -103,6 +105,10 @@
                 <div class="cmd-guide-item"><code>/wave</code> 揮手熱情打招呼</div>
                 <div class="cmd-guide-item"><code>/salute</code> 帥氣立正敬禮</div>
                 <div class="cmd-guide-item"><code>/pose</code> 偶像定格拍照姿勢</div>
+                <div class="cmd-guide-item"><code>/combo &lt;下半身&gt; &lt;上半身&gt;</code> <strong>上下半身分層組合</strong> (如 <code>/combo walk wave</code> 邊走邊揮手、<code>/combo walk salute</code>)</div>
+                <div class="cmd-guide-item"><code>/upper &lt;動作&gt;</code> 獨立切換上半身動作 (如 <code>/upper wave</code>)</div>
+                <div class="cmd-guide-item"><code>/lower &lt;動作&gt;</code> 獨立切換下半身動作 (如 <code>/lower walk</code>)</div>
+                <div class="cmd-guide-item"><code>/lookat [on|off|toggle]</code> <strong>視線與頭部跟隨滑鼠注視</strong></div>
                 <div class="cmd-guide-item"><code>/speed &lt;數值&gt;</code> 調整動畫播放速度 (例如 <code>/speed 2.0</code>)</div>
                 <div class="cmd-guide-item"><code>/play</code> / <code>/pause</code> / <code>/stop</code> 播放或暫停當前動作</div>
                 <div class="cmd-guide-item"><code>/reset</code> 重設骨骼角度至預設 T-Pose</div>

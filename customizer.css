@@ -365,6 +365,31 @@ body {
   transform: translateY(-1px);
 }
 
+.cmd-chip-btn.highlight {
+  background: rgba(236, 72, 153, 0.15);
+  border-color: rgba(236, 72, 153, 0.35);
+  color: #f472b6;
+}
+
+.cmd-chip-btn.highlight:hover {
+  background: rgba(236, 72, 153, 0.3);
+  border-color: rgba(236, 72, 153, 0.6);
+  color: #fff;
+}
+
+.cmd-chip-btn.lookat-btn {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+}
+
+.cmd-chip-btn.lookat-btn.active {
+  background: #0284c7;
+  border-color: #38bdf8;
+  color: #fff;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+}
+
 /* Collapsible Guide Popup */
 .cmd-guide-popup {
   position: absolute;

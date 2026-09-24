@@ -703,8 +703,21 @@ function applyProportions() {
 }
 
 // -----------------------------------------------------------------------------
-// Unified Bone & Animation Control
+// Unified Bone & Layered Animation Control System
 // -----------------------------------------------------------------------------
+const actionLayers = {
+  upper: 'idle', // 'idle' | 'walk' | 'dance' | 'wave' | 'salute' | 'pose' | 'bow'
+  lower: 'idle', // 'idle' | 'walk' | 'dance' | 'pose'
+  lookAt: false,
+};
+
+// Mouse tracking for LookAt
+const mouseLook = { x: 0, y: 0, targetX: 0, targetY: 0 };
+window.addEventListener('pointermove', (e) => {
+  mouseLook.targetX = (e.clientX / window.innerWidth) * 2 - 1;
+  mouseLook.targetY = -(e.clientY / window.innerHeight) * 2 + 1;
+});
+
 function getBone(name) {
   return bonesMap.get(name) || bonesMap.get(`Bone_${name}`) || null;
 }
@@ -720,11 +733,23 @@ function resetAllBones() {
   });
 }
 
+// Smooth Quaternion Slerp helper
+function applyTargetRotation(bone, rx = 0, ry = 0, rz = 0, delta = 0.016, slerpSpeed = 12.0) {
+  if (!bone) return;
+  const targetEuler = new THREE.Euler(rx, ry, rz, 'XYZ');
+  const targetQuat = new THREE.Quaternion().setFromEuler(targetEuler);
+  bone.quaternion.slerp(targetQuat, Math.min(1.0, delta * slerpSpeed));
+}
+
 function updateProceduralAnimations(delta) {
   if (!isPlaying || !model) return;
 
   animTime += delta * animSpeed;
   const t = animTime;
+
+  // Smooth mouse coordinates for LookAt
+  mouseLook.x += (mouseLook.targetX - mouseLook.x) * Math.min(1.0, delta * 8.0);
+  mouseLook.y += (mouseLook.targetY - mouseLook.y) * Math.min(1.0, delta * 8.0);
 
   const head = getBone('Head');
   const chest = getBone('Chest');
@@ -741,185 +766,265 @@ function updateProceduralAnimations(delta) {
   const rLeg = getBone('RightUpperLeg');
   const rKnee = getBone('RightLowerLeg');
 
-  // Miku twintails & skirt
+  // Hair & Skirt secondary dynamics
   const lHair1 = getBone('LeftTwintail_1');
   const lHair2 = getBone('LeftTwintail_2');
   const rHair1 = getBone('RightTwintail_1');
   const rHair2 = getBone('RightTwintail_2');
   const skirtFL = getBone('Skirt_FrontLeft');
   const skirtFR = getBone('Skirt_FrontRight');
-  const skirtB = getBone('Skirt_Back');
 
-  if (currentAnimName === 'idle') {
-    const breath = Math.sin(t * 2.2);
-    if (chest) chest.rotation.x = breath * 0.08;
-    if (spine) spine.rotation.x = breath * 0.04;
-    if (head) {
-      head.rotation.x = Math.sin(t * 1.5) * 0.06;
-      head.rotation.y = Math.sin(t * 0.9) * 0.12;
-    }
-    if (lArm) lArm.rotation.z = 0.08 + Math.sin(t * 2.2) * 0.04;
-    if (rArm) rArm.rotation.z = -0.08 - Math.sin(t * 2.2) * 0.04;
+  // Shared math cycles
+  const walkCycle = t * 4.2;
+  const sinWalk = Math.sin(walkCycle);
+  const cosWalk = Math.cos(walkCycle);
 
-    // Twintails gentle swaying in breeze
-    const hairSway = Math.sin(t * 2.0);
-    if (lHair1) lHair1.rotation.z = 0.05 + hairSway * 0.08;
-    if (lHair2) lHair2.rotation.z = 0.08 + hairSway * 0.06;
-    if (rHair1) rHair1.rotation.z = -0.05 - hairSway * 0.08;
-    if (rHair2) rHair2.rotation.z = -0.08 - hairSway * 0.06;
+  const danceBeat = t * 4.8;
+  const swayDance = Math.sin(danceBeat);
+
+  const breath = Math.sin(t * 2.2);
+
+  // ---------------------------------------------------------------------------
+  // 1. Lower Body Calculation (hips, legs, knees, skirts)
+  // ---------------------------------------------------------------------------
+  const lowerAction = actionLayers.lower;
+  let hipX = 0, hipY = 0, hipZ = 0;
+  let lLegX = 0, lLegY = 0, lLegZ = 0.02;
+  let rLegX = 0, rLegY = 0, rLegZ = -0.02;
+  let lKneeX = 0, rKneeX = 0;
+  let skirtLX = 0, skirtRX = 0;
+
+  if (lowerAction === 'walk') {
+    hipY = -sinWalk * 0.10;
+    hipZ = sinWalk * 0.04;
+    lLegX = sinWalk * 0.55;
+    rLegX = -sinWalk * 0.55;
+    lKneeX = Math.max(0, -sinWalk * 0.7);
+    rKneeX = Math.max(0, sinWalk * 0.7);
+    skirtLX = Math.max(0, sinWalk * 0.25);
+    skirtRX = Math.max(0, -sinWalk * 0.25);
+  } else if (lowerAction === 'dance') {
+    hipZ = swayDance * 0.22;
+    hipY = Math.cos(danceBeat * 0.5) * 0.25;
+    lLegX = swayDance * 0.15;
+    lLegZ = -swayDance * 0.08;
+    rLegX = -swayDance * 0.15;
+    rLegZ = -swayDance * 0.08;
+    lKneeX = Math.abs(swayDance) * 0.35;
+    rKneeX = Math.abs(Math.cos(danceBeat)) * 0.35;
+  } else if (lowerAction === 'pose') {
+    hipZ = -0.08;
+    lLegZ = -0.04;
+    rLegX = -0.15;
+    rLegZ = 0.08;
+    rKneeX = 0.3;
+  } else {
+    // idle
+    hipX = 0;
+    hipY = breath * 0.02;
+    hipZ = 0;
   }
-  else if (currentAnimName === 'walk') {
-    const cycle = t * 4.2;
-    const sinCycle = Math.sin(cycle);
-    const cosCycle = Math.cos(cycle);
 
-    // Legs
-    if (lLeg) lLeg.rotation.x = sinCycle * 0.55;
-    if (rLeg) rLeg.rotation.x = -sinCycle * 0.55;
-    if (lKnee) lKnee.rotation.x = Math.max(0, -sinCycle * 0.7);
-    if (rKnee) rKnee.rotation.x = Math.max(0, sinCycle * 0.7);
+  applyTargetRotation(hips, hipX, hipY, hipZ, delta);
+  applyTargetRotation(lLeg, lLegX, lLegY, lLegZ, delta);
+  applyTargetRotation(rLeg, rLegX, rLegY, rLegZ, delta);
+  applyTargetRotation(lKnee, lKneeX, 0, 0, delta);
+  applyTargetRotation(rKnee, rKneeX, 0, 0, delta);
+  applyTargetRotation(skirtFL, skirtLX, 0, 0, delta);
+  applyTargetRotation(skirtFR, skirtRX, 0, 0, delta);
 
-    // Arms
-    if (lArm) lArm.rotation.x = -sinCycle * 0.45;
-    if (rArm) rArm.rotation.x = sinCycle * 0.45;
+  // ---------------------------------------------------------------------------
+  // 2. Upper Body Calculation (chest, spine, arms, forearms)
+  // ---------------------------------------------------------------------------
+  const upperAction = actionLayers.upper;
+  let chestX = 0, chestY = 0, chestZ = 0;
+  let spineX = 0, spineY = 0, spineZ = 0;
+  let lArmX = 0, lArmY = 0, lArmZ = 0.08;
+  let rArmX = 0, rArmY = 0, rArmZ = -0.08;
+  let lForeX = 0, lForeY = 0, lForeZ = 0;
+  let rForeX = 0, rForeY = 0, rForeZ = 0;
 
-    // Torso sway
-    if (spine) spine.rotation.y = sinCycle * 0.12;
-    if (hips) hips.rotation.y = -sinCycle * 0.10;
-    if (head) head.rotation.y = -sinCycle * 0.08;
-
-    // Twintails bounce with stride
-    const hairBounce = Math.abs(cosCycle) * 0.2;
-    if (lHair1) {
-      lHair1.rotation.x = -hairBounce;
-      lHair1.rotation.z = 0.1 + sinCycle * 0.15;
+  if (upperAction === 'walk') {
+    spineY = sinWalk * 0.12;
+    chestY = sinWalk * 0.08;
+    lArmX = -sinWalk * 0.45;
+    rArmX = sinWalk * 0.45;
+    lArmZ = 0.1;
+    rArmZ = -0.1;
+    lForeX = 0.15;
+    rForeX = 0.15;
+  } else if (upperAction === 'dance') {
+    spineZ = -swayDance * 0.18;
+    chestY = swayDance * 0.25;
+    rArmX = Math.cos(danceBeat) * 0.55;
+    rArmZ = -0.6 + Math.sin(danceBeat) * 0.45;
+    lArmX = -Math.cos(danceBeat) * 0.55;
+    lArmZ = 0.6 - Math.sin(danceBeat) * 0.45;
+    lForeX = Math.abs(Math.sin(danceBeat)) * 0.7;
+    rForeX = Math.abs(Math.cos(danceBeat)) * 0.7;
+  } else if (upperAction === 'wave') {
+    const waveSin = Math.sin(t * 7.5) * 0.45;
+    chestX = 0.04;
+    chestY = 0.08;
+    rArmX = -0.20;
+    rArmY = 0.35;
+    rArmZ = -2.1;
+    rForeY = 0.45;
+    rForeZ = 0.35 + waveSin;
+    // Left arm adapts to lower body (swings if walking, rests if idle)
+    if (lowerAction === 'walk') {
+      lArmX = -sinWalk * 0.45;
+      lArmZ = 0.12;
+    } else {
+      lArmZ = 0.10 + breath * 0.03;
     }
-    if (rHair1) {
-      rHair1.rotation.x = -hairBounce;
-      rHair1.rotation.z = -0.1 + sinCycle * 0.15;
+  } else if (upperAction === 'salute') {
+    chestX = -0.06;
+    rArmX = 0.20;
+    rArmY = -0.35;
+    rArmZ = -1.15;
+    rForeX = -0.25;
+    rForeY = 0.35;
+    rForeZ = -2.05;
+    if (lowerAction === 'walk') {
+      lArmX = -sinWalk * 0.35;
+      lArmZ = 0.12;
+    } else {
+      lArmZ = 0.10;
     }
-
-    // Skirt motion
-    if (skirtFL) skirtFL.rotation.x = Math.max(0, sinCycle * 0.25);
-    if (skirtFR) skirtFR.rotation.x = Math.max(0, -sinCycle * 0.25);
-  }
-  else if (currentAnimName === 'dance') {
-    const beat = t * 4.8;
-    const sway = Math.sin(beat);
-
-    if (hips) {
-      hips.rotation.z = sway * 0.22;
-      hips.rotation.y = Math.cos(beat * 0.5) * 0.25;
-    }
-    if (spine) spine.rotation.z = -sway * 0.18;
-    if (chest) chest.rotation.y = sway * 0.25;
-    if (head) head.rotation.z = sway * 0.18;
-
-    if (rArm) {
-      rArm.rotation.z = -0.6 + Math.sin(beat) * 0.45;
-      rArm.rotation.x = Math.cos(beat) * 0.55;
-    }
-    if (lArm) {
-      lArm.rotation.z = 0.6 - Math.sin(beat) * 0.45;
-      lArm.rotation.x = -Math.cos(beat) * 0.55;
-    }
-    if (lFore) lFore.rotation.x = Math.abs(Math.sin(beat)) * 0.7;
-    if (rFore) rFore.rotation.x = Math.abs(Math.cos(beat)) * 0.7;
-
-    // Twintails energetic dance bounce
-    if (lHair1) {
-      lHair1.rotation.z = 0.15 + sway * 0.35;
-      lHair1.rotation.x = Math.sin(beat * 2) * 0.25;
-    }
-    if (rHair1) {
-      rHair1.rotation.z = -0.15 + sway * 0.35;
-      rHair1.rotation.x = Math.sin(beat * 2) * 0.25;
-    }
-  }
-  else if (currentAnimName === 'wave') {
-    const wave = Math.sin(t * 7.5) * 0.45;
-    if (rArm) {
-      rArm.rotation.z = -2.1;
-      rArm.rotation.y = 0.35;
-      rArm.rotation.x = -0.20;
-    }
-    if (rFore) {
-      rFore.rotation.y = 0.45;
-      rFore.rotation.z = 0.35 + wave;
-    }
-    if (head) {
-      head.rotation.y = -0.15;
-      head.rotation.z = 0.12;
-    }
-    if (rHair1) rHair1.rotation.z = -0.15 + wave * 0.15;
-  }
-  else if (currentAnimName === 'salute') {
-    if (rArm) {
-      rArm.rotation.z = -1.15;
-      rArm.rotation.y = -0.35;
-      rArm.rotation.x = 0.20;
-    }
-    if (rFore) {
-      rFore.rotation.z = -2.05;
-      rFore.rotation.y = 0.35;
-      rFore.rotation.x = -0.25;
-    }
-    if (chest) chest.rotation.x = -0.06;
-    if (head) {
-      head.rotation.x = 0.05;
-      head.rotation.y = -0.05;
-    }
-  }
-  else if (currentAnimName === 'bow') {
+  } else if (upperAction === 'bow') {
     const bowCycle = Math.sin(t * 1.8);
     const angle = Math.max(0, bowCycle) * 0.55;
-    if (spine) spine.rotation.x = angle * 0.45;
-    if (chest) chest.rotation.x = angle * 0.35;
-    if (head) head.rotation.x = angle * 0.15;
-    if (rArm) {
-      rArm.rotation.x = -angle * 0.25;
-      rArm.rotation.z = -0.10;
+    spineX = angle * 0.45;
+    chestX = angle * 0.35;
+    rArmX = -angle * 0.25;
+    rArmZ = -0.10;
+    lArmX = -angle * 0.25;
+    lArmZ = 0.10;
+  } else if (upperAction === 'pose') {
+    spineZ = 0.08;
+    rArmX = 0.3;
+    rArmY = 0.5;
+    rArmZ = -1.5;
+    rForeZ = -1.2;
+    lArmY = -0.2;
+    lArmZ = 0.45;
+    lForeZ = 0.8;
+  } else {
+    // idle
+    chestX = breath * 0.08;
+    spineX = breath * 0.04;
+    if (lowerAction === 'walk') {
+      // Natural walking arm swing while in upper idle
+      lArmX = -sinWalk * 0.45;
+      rArmX = sinWalk * 0.45;
+      lArmZ = 0.1;
+      rArmZ = -0.1;
+      lForeX = 0.1;
+      rForeX = 0.1;
+    } else {
+      lArmZ = 0.08 + breath * 0.04;
+      rArmZ = -0.08 - breath * 0.04;
     }
-    if (lArm) {
-      lArm.rotation.x = -angle * 0.25;
-      lArm.rotation.z = 0.10;
-    }
-    if (lHair1) lHair1.rotation.x = angle * 0.45;
-    if (rHair1) rHair1.rotation.x = angle * 0.45;
   }
-  else if (currentAnimName === 'pose') {
-    if (head) {
-      head.rotation.z = -0.15;
-      head.rotation.y = 0.12;
-      head.rotation.x = -0.05;
+
+  applyTargetRotation(spine, spineX, spineY, spineZ, delta);
+  applyTargetRotation(chest, chestX, chestY, chestZ, delta);
+  applyTargetRotation(lArm, lArmX, lArmY, lArmZ, delta);
+  applyTargetRotation(rArm, rArmX, rArmY, rArmZ, delta);
+  applyTargetRotation(lFore, lForeX, lForeY, lForeZ, delta);
+  applyTargetRotation(rFore, rForeX, rForeY, rForeZ, delta);
+
+  // ---------------------------------------------------------------------------
+  // 3. Head & LookAt Tracking
+  // ---------------------------------------------------------------------------
+  let headX = 0, headY = 0, headZ = 0;
+
+  if (actionLayers.lookAt) {
+    // Track cursor with smooth clamped bounds
+    headY = -mouseLook.x * 0.55; // horizontal yaw
+    headX = -mouseLook.y * 0.35; // vertical pitch
+    headZ = -mouseLook.x * 0.10; // slight cute head tilt
+  } else {
+    if (upperAction === 'wave') {
+      headY = -0.15;
+      headZ = 0.12;
+    } else if (upperAction === 'salute') {
+      headX = 0.05;
+      headY = -0.05;
+    } else if (upperAction === 'bow') {
+      const bowCycle = Math.sin(t * 1.8);
+      headX = Math.max(0, bowCycle) * 0.55 * 0.15;
+    } else if (upperAction === 'pose') {
+      headZ = -0.15;
+      headY = 0.12;
+      headX = -0.05;
+    } else if (upperAction === 'dance') {
+      headZ = swayDance * 0.18;
+    } else if (lowerAction === 'walk') {
+      headY = -sinWalk * 0.08;
+    } else {
+      headX = Math.sin(t * 1.5) * 0.06;
+      headY = Math.sin(t * 0.9) * 0.12;
     }
-    if (spine) spine.rotation.z = 0.08;
-    if (hips) hips.rotation.z = -0.08;
-    if (rArm) {
-      rArm.rotation.z = -1.5;
-      rArm.rotation.y = 0.5;
-      rArm.rotation.x = 0.3;
-    }
-    if (rFore) rFore.rotation.z = -1.2;
-    if (lArm) {
-      lArm.rotation.z = 0.45;
-      lArm.rotation.y = -0.2;
-    }
-    if (lFore) lFore.rotation.z = 0.8;
-    if (rLeg) {
-      rLeg.rotation.x = -0.15;
-      rLeg.rotation.z = 0.08;
-    }
-    if (rKnee) rKnee.rotation.x = 0.3;
-    if (lHair1) lHair1.rotation.z = 0.25;
-    if (rHair1) rHair1.rotation.z = -0.2;
   }
+
+  applyTargetRotation(head, headX, headY, headZ, delta);
+
+  // ---------------------------------------------------------------------------
+  // 4. Secondary Dynamics (Hair Twintails)
+  // ---------------------------------------------------------------------------
+  let lHairZ = 0.05, rHairZ = -0.05;
+  let lHairX = 0, rHairX = 0;
+
+  if (lowerAction === 'walk') {
+    const hairBounce = Math.abs(cosWalk) * 0.2;
+    lHairX = -hairBounce;
+    rHairX = -hairBounce;
+    lHairZ = 0.1 + sinWalk * 0.15;
+    rHairZ = -0.1 + sinWalk * 0.15;
+  } else if (upperAction === 'dance' || lowerAction === 'dance') {
+    lHairZ = 0.15 + swayDance * 0.35;
+    rHairZ = -0.15 + swayDance * 0.35;
+    lHairX = Math.sin(danceBeat * 2) * 0.25;
+    rHairX = Math.sin(danceBeat * 2) * 0.25;
+  } else if (upperAction === 'wave') {
+    const waveSin = Math.sin(t * 7.5) * 0.45;
+    rHairZ = -0.15 + waveSin * 0.15;
+  } else {
+    // idle breeze
+    const hairSway = Math.sin(t * 2.0);
+    lHairZ = 0.05 + hairSway * 0.08;
+    rHairZ = -0.05 - hairSway * 0.08;
+  }
+
+  applyTargetRotation(lHair1, lHairX, 0, lHairZ, delta);
+  applyTargetRotation(lHair2, lHairX * 0.5, 0, lHairZ * 1.2, delta);
+  applyTargetRotation(rHair1, rHairX, 0, rHairZ, delta);
+  applyTargetRotation(rHair2, rHairX * 0.5, 0, rHairZ * 1.2, delta);
 }
 
 function playAnimation(animName) {
   currentAnimName = animName;
-  resetAllBones();
-  animTime = 0;
+
+  // Map high-level animation names to layers
+  if (animName === 'walk') {
+    actionLayers.lower = 'walk';
+    actionLayers.upper = 'walk';
+  } else if (animName === 'dance') {
+    actionLayers.lower = 'dance';
+    actionLayers.upper = 'dance';
+  } else if (animName === 'pose') {
+    actionLayers.lower = 'pose';
+    actionLayers.upper = 'pose';
+  } else if (animName === 'wave' || animName === 'salute' || animName === 'bow') {
+    actionLayers.upper = animName;
+    if (actionLayers.lower === 'pose') actionLayers.lower = 'idle';
+  } else {
+    // idle
+    actionLayers.lower = 'idle';
+    actionLayers.upper = 'idle';
+  }
 
   if (mixer) {
     const key = animName.toLowerCase();
@@ -933,6 +1038,11 @@ function playAnimation(animName) {
       action.reset().fadeIn(0.2).play();
     }
   }
+}
+
+function setLayeredAction(upper, lower) {
+  if (upper) actionLayers.upper = upper;
+  if (lower) actionLayers.lower = lower;
 }
 
 function togglePlayPause(play) {
@@ -1416,6 +1526,48 @@ function executeActionCommand(rawInput) {
       showCommandFeedback('✅ [指令成功] 拍照定格 Pose (/pose)', 'success');
       break;
 
+    case 'combo': {
+      const lower = (parts[1] || 'walk').toLowerCase();
+      const upper = (parts[2] || 'wave').toLowerCase();
+      setLayeredAction(upper, lower);
+      showCommandFeedback(`⚡ [分層組合成功] 下半身: [${lower}] + 上半身: [${upper}]`, 'success');
+      break;
+    }
+
+    case 'upper':
+      if (arg1) {
+        setLayeredAction(arg1.toLowerCase(), null);
+        showCommandFeedback(`⚡ [上半身獨立指令] 已設定上半身動作為: [${arg1}]`, 'success');
+      } else {
+        showCommandFeedback('⚠️ [語法格式] 請指定動作，例如: /upper wave 或 /upper salute', 'error');
+      }
+      break;
+
+    case 'lower':
+      if (arg1) {
+        setLayeredAction(null, arg1.toLowerCase());
+        showCommandFeedback(`⚡ [下半身獨立指令] 已設定下半身動作為: [${arg1}]`, 'success');
+      } else {
+        showCommandFeedback('⚠️ [語法格式] 請指定動作，例如: /lower walk 或 /lower dance', 'error');
+      }
+      break;
+
+    case 'lookat': {
+      if (arg1 === 'on') actionLayers.lookAt = true;
+      else if (arg1 === 'off') actionLayers.lookAt = false;
+      else actionLayers.lookAt = !actionLayers.lookAt;
+
+      const lookatBtn = document.getElementById('chip-lookat-toggle');
+      if (lookatBtn) lookatBtn.classList.toggle('active', actionLayers.lookAt);
+
+      if (actionLayers.lookAt) {
+        showCommandFeedback('👀 [視線追蹤開啟] 角色頭部與目光正在跟隨滑鼠注視 (/lookat on)', 'success');
+      } else {
+        showCommandFeedback('🙈 [視線追蹤關閉] 角色恢復預設動作朝向 (/lookat off)', 'info');
+      }
+      break;
+    }
+
     case 'speed':
       if (arg1 && !isNaN(parseFloat(arg1))) {
         animSpeed = Math.max(0.1, Math.min(5.0, parseFloat(arg1)));
@@ -1441,6 +1593,11 @@ function executeActionCommand(rawInput) {
     case 'reset':
       resetAllBones();
       animTime = 0;
+      actionLayers.upper = 'idle';
+      actionLayers.lower = 'idle';
+      actionLayers.lookAt = false;
+      const lookatBtn = document.getElementById('chip-lookat-toggle');
+      if (lookatBtn) lookatBtn.classList.remove('active');
       showCommandFeedback('🔄 [重設骨骼] 角色所有關節已重設至預設姿勢 (/reset)', 'info');
       break;
 
@@ -1455,6 +1612,19 @@ function executeActionCommand(rawInput) {
       break;
   }
 }
+
+// Expose public Action API for external scripting/consoles
+window.avatarActionAPI = {
+  playAnimation,
+  setLayeredAction,
+  executeActionCommand,
+  actionLayers,
+  toggleLookAt: (enable) => {
+    actionLayers.lookAt = (enable !== undefined) ? enable : !actionLayers.lookAt;
+    const btn = document.getElementById('chip-lookat-toggle');
+    if (btn) btn.classList.toggle('active', actionLayers.lookAt);
+  }
+};
 
 function initActionCommandSystem() {
   const input = document.getElementById('anim-cmd-input');
