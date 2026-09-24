@@ -361,11 +361,11 @@ function loadModularModel(targetModelType = avatarConfig.avatarModel) {
   let desc = '初始化 16 款動漫幾何模組與 3D 骨架中...';
 
   if (isMiku) {
-    url = 'miku_modular.glb?v=5.0';
+    url = 'miku_modular.glb?v=6.0';
     title = '載入初音未來模組化紙娃娃中...';
     desc = '初始化 SEGA 高精手繪部件、立體頭蓋骨素體與日系假髮...';
   } else if (isMint) {
-    url = 'mint_modular.glb?v=4.0';
+    url = 'mint_modular.glb?v=5.0';
     title = (targetModelType === 'miku_mint') ? '載入初音水著 (夢幻聯動) 中...' : '載入薄荷 Mint (Neverness To Everness) 中...';
     desc = '初始化 2D Flat 動漫渲、立體頭型與 24 秒官方靈動展示舞步...';
   }
@@ -399,6 +399,13 @@ function loadModularModel(targetModelType = avatarConfig.avatarModel) {
       model.traverse((child) => {
         if (child.isMesh) {
           allMeshes.set(child.name, child);
+
+          // Immediately hide any unused nodes or procedural hair remnants on Miku / Mint
+          if (child.name.startsWith('_unused_') || ['Hair_Bob', 'Hair_Hime', 'Hair_Parted', 'Hair_Spiky', 'Hair_Twintails', 'Hair_Miku_Short'].includes(child.name)) {
+            if (isMiku || isMint) {
+              child.visible = false;
+            }
+          }
 
           if (isMint) {
             // Apply 2D Anime Flat Shading instructions:
@@ -516,9 +523,13 @@ function applyAvatarConfiguration() {
     // === MIKU MODULAR PARTS ===
     // 1. Hair
     const isTwintails = (cfg.hair === 'Hair_Miku_Twintails');
-    const isShort = (cfg.hair === 'Hair_Miku_Short' || cfg.hair === 'Hair_Bob');
     setMeshVisibility('Hair_Miku_Twintails', isTwintails);
-    setMeshVisibility('Hair_Miku_Short', isShort);
+    setMeshVisibility('Hair_Bob', false);
+    setMeshVisibility('Hair_Hime', false);
+    setMeshVisibility('Hair_Parted', false);
+    setMeshVisibility('Hair_Spiky', false);
+    setMeshVisibility('Hair_Twintails', false);
+    setMeshVisibility('Hair_Miku_Short', false);
 
     // 2. Head & Facial Features + 3D Solid Cranium
     setMeshVisibility('Head_Miku', true);
@@ -563,12 +574,11 @@ function applyAvatarConfiguration() {
 
       // Hair selection on Miku
       const isTwintails = (cfg.hair === 'Hair_Miku_Twintails');
-      const isShort = (cfg.hair === 'Hair_Miku_Short' || cfg.hair === 'Hair_Bob');
       const isMintFull = (cfg.hair === 'Hair_Mint_Full');
       const isMintShort = (cfg.hair === 'Hair_Mint_Front');
 
       setMeshVisibility('Hair_Miku_Twintails', isTwintails);
-      setMeshVisibility('Hair_Miku_Short', isShort);
+      setMeshVisibility('Hair_Miku_Short', false);
       setMeshVisibility('Accessory_Miku_Headset', cfg.accessories.has('Accessory_Miku_Headset') && isTwintails);
 
       // Mint hair worn on Miku
@@ -592,7 +602,7 @@ function applyAvatarConfiguration() {
 
       // 2. Show Mint Head, Face features, and Mint Hair (Full or Short Bob)
       const hasFull = (cfg.hair === 'Hair_Mint_Full');
-      const hasShort = (cfg.hair === 'Hair_Mint_Front' || cfg.hair === 'Hair_Miku_Short' || cfg.hair === 'Hair_Bob');
+      const hasShort = (cfg.hair === 'Hair_Mint_Front' || cfg.hair === 'Hair_Miku_Short');
 
       // In short hair mode, Hair_Mint_Back_Bob provides the rear skull/bob so Mint is never hollow!
       setMeshVisibility('Hair_Mint_Front', hasFull || hasShort);

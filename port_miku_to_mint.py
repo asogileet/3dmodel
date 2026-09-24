@@ -279,56 +279,7 @@ def port_miku_to_mint():
             g_mint['scenes'][0]['nodes'].append(node_cr_idx)
             print(f"Added Head_Miku_Cranium: {cnt} vertices, {len(idx)//3} triangles.")
 
-    # 5. Port Hair_Miku_Short (Miku Anime Short Bob)
-    for node in g_miku['nodes']:
-        if node.get('name') == 'Hair_Miku_Short':
-            mesh = g_miku['meshes'][node['mesh']]
-            prim = mesh['primitives'][0]
-            pos, _, _ = get_acc_data(prim['attributes']['POSITION'])
-            nor, _, _ = get_acc_data(prim['attributes']['NORMAL'])
-            uv,  _, _ = get_acc_data(prim['attributes']['TEXCOORD_0'])
-            idx, _, _ = get_acc_data(prim['indices'])
-
-            t_pos = transform_positions(pos)
-            cnt = len(pos)
-            j = np.zeros((cnt, 4), dtype=np.uint16)
-            j[:, 0] = 108
-            w = np.zeros((cnt, 4), dtype=np.float32)
-            w[:, 0] = 1.0
-
-            acc_sb_p = append_buffer_and_accessor(t_pos, 5126, 'VEC3')
-            acc_sb_n = append_buffer_and_accessor(nor, 5126, 'VEC3')
-            acc_sb_u = append_buffer_and_accessor(uv, 5126, 'VEC2')
-            acc_sb_i = append_buffer_and_accessor(idx.astype(np.uint32), 5125, 'SCALAR', target=34963)
-            acc_sb_j = append_buffer_and_accessor(j, 5123, 'VEC4')
-            acc_sb_w = append_buffer_and_accessor(w, 5126, 'VEC4')
-
-            mesh_sb_idx = len(g_mint['meshes'])
-            g_mint['meshes'].append({
-                'name': 'Hair_Miku_Short',
-                'primitives': [{
-                    'attributes': {
-                        'POSITION': acc_sb_p,
-                        'NORMAL': acc_sb_n,
-                        'TEXCOORD_0': acc_sb_u,
-                        'JOINTS_0': acc_sb_j,
-                        'WEIGHTS_0': acc_sb_w
-                    },
-                    'indices': acc_sb_i,
-                    'material': mat_hair
-                }]
-            })
-
-            node_sb_idx = len(g_mint['nodes'])
-            g_mint['nodes'].append({
-                'name': 'Hair_Miku_Short',
-                'mesh': mesh_sb_idx,
-                'skin': 3
-            })
-            g_mint['scenes'][0]['nodes'].append(node_sb_idx)
-            print(f"Added Hair_Miku_Short: {cnt} vertices, {len(idx)//3} triangles.")
-
-    # 6. Port Hair_Miku_Twintails
+    # 5. Port Hair_Miku_Twintails
     for node in g_miku['nodes']:
         if node.get('name') == 'Hair_Miku_Twintails':
             mesh = g_miku['meshes'][node['mesh']]
