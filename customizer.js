@@ -812,6 +812,37 @@ function updateProceduralAnimations(delta) {
     rLegZ = -swayDance * 0.08;
     lKneeX = Math.abs(swayDance) * 0.35;
     rKneeX = Math.abs(Math.cos(danceBeat)) * 0.35;
+  } else if (lowerAction === 'jump') {
+    const jumpCycle = t * 5.2;
+    const sinJump = Math.sin(jumpCycle);
+    const jumpAir = Math.max(-0.25, sinJump);
+    hipY = jumpAir * 0.35;
+    lLegX = (sinJump > 0) ? -0.25 : 0.25;
+    rLegX = (sinJump > 0) ? -0.25 : 0.25;
+    lKneeX = (sinJump > 0) ? 0.5 : 0.2;
+    rKneeX = (sinJump > 0) ? 0.5 : 0.2;
+    skirtLX = (sinJump > 0) ? 0.35 : -0.15;
+    skirtRX = (sinJump > 0) ? 0.35 : -0.15;
+  } else if (lowerAction === 'stretch') {
+    hipX = -0.06;
+    lLegX = 0.05;
+    rLegX = 0.05;
+  } else if (lowerAction === 'heart') {
+    hipZ = -0.12;
+    lLegZ = -0.05;
+    rLegX = -0.10;
+    rLegZ = 0.08;
+    rKneeX = 0.25;
+  } else if (lowerAction === 'shy') {
+    const shySway = Math.sin(t * 3.2);
+    lLegZ = -0.08 + shySway * 0.03;
+    rLegZ = 0.08 - shySway * 0.03;
+    lKneeX = 0.15;
+    rKneeX = 0.15;
+  } else if (lowerAction === 'pout') {
+    hipZ = 0.12;
+    lLegZ = 0.08;
+    rLegZ = 0.04;
   } else if (lowerAction === 'pose') {
     hipZ = -0.08;
     lLegZ = -0.04;
@@ -862,6 +893,49 @@ function updateProceduralAnimations(delta) {
     lArmZ = 0.6 - Math.sin(danceBeat) * 0.45;
     lForeX = Math.abs(Math.sin(danceBeat)) * 0.7;
     rForeX = Math.abs(Math.cos(danceBeat)) * 0.7;
+  } else if (upperAction === 'jump') {
+    const sinJump = Math.sin(t * 5.2);
+    chestX = -0.15;
+    lArmZ = 2.3 + sinJump * 0.25;
+    rArmZ = -2.3 - sinJump * 0.25;
+    lArmX = 0.2;
+    rArmX = 0.2;
+    lForeZ = 0.35;
+    rForeZ = -0.35;
+  } else if (upperAction === 'stretch') {
+    const stretchCycle = Math.sin(t * 1.5);
+    chestX = -0.20 + stretchCycle * 0.05;
+    spineX = -0.10 + stretchCycle * 0.04;
+    lArmZ = 2.65;
+    rArmZ = -2.65;
+    lArmX = -0.15;
+    rArmX = -0.15;
+    lForeZ = 0.45;
+    rForeZ = -0.45;
+  } else if (upperAction === 'heart') {
+    const heartBeat = Math.sin(t * 3.0);
+    chestX = 0.02;
+    chestY = 0.05;
+    spineZ = 0.06;
+    lArmX = 0.35; lArmY = -0.45; lArmZ = 0.75;
+    rArmX = 0.35; rArmY = 0.45; rArmZ = -0.75;
+    lForeX = 0.1; lForeY = 0.55; lForeZ = 1.65 + heartBeat * 0.05;
+    rForeX = 0.1; rForeY = -0.55; rForeZ = -1.65 - heartBeat * 0.05;
+  } else if (upperAction === 'shy') {
+    const shySway = Math.sin(t * 3.2);
+    chestX = 0.12;
+    spineX = 0.08;
+    lArmX = 0.4; lArmY = -0.25; lArmZ = 0.55;
+    rArmX = 0.4; rArmY = 0.25; rArmZ = -0.55;
+    lForeX = 0.2; lForeZ = 2.15 + shySway * 0.04;
+    rForeX = 0.2; rForeZ = -2.15 - shySway * 0.04;
+  } else if (upperAction === 'pout') {
+    chestX = -0.08;
+    spineY = -0.12;
+    lArmX = -0.1; lArmY = 0.3; lArmZ = 0.95;
+    rArmX = -0.1; rArmY = -0.3; rArmZ = -0.95;
+    lForeX = -0.3; lForeZ = 1.45;
+    rForeX = -0.3; rForeZ = -1.45;
   } else if (upperAction === 'wave') {
     const waveSin = Math.sin(t * 7.5) * 0.45;
     chestX = 0.04;
@@ -946,7 +1020,21 @@ function updateProceduralAnimations(delta) {
     headX = -mouseLook.y * 0.35; // vertical pitch
     headZ = -mouseLook.x * 0.10; // slight cute head tilt
   } else {
-    if (upperAction === 'wave') {
+    if (upperAction === 'jump') {
+      headX = -0.12;
+    } else if (upperAction === 'stretch') {
+      headX = -0.22 + Math.sin(t * 1.5) * 0.05;
+    } else if (upperAction === 'heart') {
+      headZ = -0.22;
+      headY = 0.10;
+    } else if (upperAction === 'shy') {
+      headX = 0.22;
+      headZ = Math.sin(t * 3.2) * 0.08;
+    } else if (upperAction === 'pout') {
+      headY = 0.38 + Math.sin(t * 2.0) * 0.03;
+      headZ = 0.12;
+      headX = -0.05;
+    } else if (upperAction === 'wave') {
       headY = -0.15;
       headZ = 0.12;
     } else if (upperAction === 'salute') {
@@ -977,7 +1065,13 @@ function updateProceduralAnimations(delta) {
   let lHairZ = 0.05, rHairZ = -0.05;
   let lHairX = 0, rHairX = 0;
 
-  if (lowerAction === 'walk') {
+  if (lowerAction === 'jump' || upperAction === 'jump') {
+    const sinJump = Math.sin(t * 5.2);
+    lHairX = -sinJump * 0.5;
+    rHairX = -sinJump * 0.5;
+    lHairZ = 0.25;
+    rHairZ = -0.25;
+  } else if (lowerAction === 'walk') {
     const hairBounce = Math.abs(cosWalk) * 0.2;
     lHairX = -hairBounce;
     rHairX = -hairBounce;
@@ -1014,12 +1108,27 @@ function playAnimation(animName) {
   } else if (animName === 'dance') {
     actionLayers.lower = 'dance';
     actionLayers.upper = 'dance';
+  } else if (animName === 'jump') {
+    actionLayers.lower = 'jump';
+    actionLayers.upper = 'jump';
+  } else if (animName === 'stretch') {
+    actionLayers.lower = 'stretch';
+    actionLayers.upper = 'stretch';
+  } else if (animName === 'heart') {
+    actionLayers.lower = 'heart';
+    actionLayers.upper = 'heart';
+  } else if (animName === 'shy') {
+    actionLayers.lower = 'shy';
+    actionLayers.upper = 'shy';
+  } else if (animName === 'pout') {
+    actionLayers.lower = 'pout';
+    actionLayers.upper = 'pout';
   } else if (animName === 'pose') {
     actionLayers.lower = 'pose';
     actionLayers.upper = 'pose';
   } else if (animName === 'wave' || animName === 'salute' || animName === 'bow') {
     actionLayers.upper = animName;
-    if (actionLayers.lower === 'pose') actionLayers.lower = 'idle';
+    if (actionLayers.lower === 'pose' || actionLayers.lower === 'jump') actionLayers.lower = 'idle';
   } else {
     // idle
     actionLayers.lower = 'idle';
@@ -1524,6 +1633,37 @@ function executeActionCommand(rawInput) {
       playAnimation('pose');
       updateActiveAnimButton('pose');
       showCommandFeedback('✅ [指令成功] 拍照定格 Pose (/pose)', 'success');
+      break;
+
+    case 'jump':
+      playAnimation('jump');
+      updateActiveAnimButton('jump');
+      showCommandFeedback('✅ [指令成功] 元氣歡呼彈跳中 (/jump)', 'success');
+      break;
+
+    case 'stretch':
+      playAnimation('stretch');
+      updateActiveAnimButton('stretch');
+      showCommandFeedback('✅ [指令成功] 放鬆深呼吸伸懶腰 (/stretch)', 'success');
+      break;
+
+    case 'heart':
+      playAnimation('heart');
+      updateActiveAnimButton('heart');
+      showCommandFeedback('💖 [指令成功] 萌系胸前比愛心 Pose (/heart)', 'success');
+      break;
+
+    case 'shy':
+      playAnimation('shy');
+      updateActiveAnimButton('shy');
+      showCommandFeedback('😳 [指令成功] 羞澀雙手護臉小碎步 (/shy)', 'success');
+      break;
+
+    case 'pout':
+    case 'angry':
+      playAnimation('pout');
+      updateActiveAnimButton('pout');
+      showCommandFeedback('😤 [指令成功] 傲嬌叉腰生氣轉頭 (/pout)', 'success');
       break;
 
     case 'combo': {
